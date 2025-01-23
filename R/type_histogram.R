@@ -21,9 +21,9 @@
 #' # Use `type_histogram()` to pass extra arguments for customization
 #' tinyplot(Nile, type = type_histogram(breaks = 30))
 #' @export
-type_histogram = function(breaks = "Sturges", freebreaks = FALSE, freq = TRUE) {
+type_histogram = function(breaks = "Sturges") {
     out = list(
-        data = data_histogram(breaks = breaks, freebreaks = freebreaks, freq = freq),
+        data = data_histogram(breaks = breaks),
         draw = draw_rect(),
         name = "histogram"
     )
@@ -36,15 +36,12 @@ type_histogram = function(breaks = "Sturges", freebreaks = FALSE, freq = TRUE) {
 type_hist = type_histogram
 
 
-data_histogram = function(breaks = "Sturges", freebreaks = FALSE, freq = TRUE) {
+data_histogram = function(breaks = "Sturges") {
     hbreaks = breaks
-    hfreebreaks = freebreaks
-    hfreq = freq
-    fun = function(by, facet, ylab, col, bg, ribbon.alpha, datapoints, .breaks = hbreaks, .freebreaks = hfreebreaks, .freq = hfreq, ...) {
-        hbreaks = ifelse(!sapply(.breaks, is.null), .breaks, "Sturges")
-        hfreq = .freq
+    fun = function(by, facet, ylab, col, bg, ribbon.alpha, datapoints, .breaks = hbreaks, ...) {
+        hbreaks = ifelse(!is.null(.breaks), .breaks, "Sturges")
 
-        if (is.null(ylab)) ylab = ifelse(.freq, "Frequency", "Density")
+        if (is.null(ylab)) ylab = "Frequency"
         if (is.null(by) && is.null(palette)) {
             if (is.null(col)) col = par("fg")
             if (is.null(bg)) bg = "lightgray"
@@ -52,18 +49,17 @@ data_histogram = function(breaks = "Sturges", freebreaks = FALSE, freq = TRUE) {
             if (is.null(bg)) bg = ribbon.alpha
         }
 
-        if (!.freebreaks) datapoints_breaks = hist(datapoints$x, breaks = hbreaks, plot = FALSE)$breaks
+        datapoints_breaks = hist(datapoints$x, breaks = hbreaks, plot = FALSE)
         datapoints = split(datapoints, list(datapoints$by, datapoints$facet))
         datapoints = Filter(function(k) nrow(k) > 0, datapoints)
 
         datapoints = lapply(datapoints, function(k) {
-            if (.freebreaks) datapoints_breaks = hbreaks
-            h = hist(k$x, breaks = datapoints_breaks, plot = FALSE)
+            h = hist(k$x, breaks = datapoints_breaks$breaks, plot = FALSE)
             out = data.frame(
                 by = k$by[1], # already split
                 facet = k$facet[1], # already split
                 ymin = 0,
-                ymax = if (.freq) h$counts else h$density,
+                ymax = h$counts,
                 xmin = h$breaks[-1],
                 xmax = h$mids + (h$mids - h$breaks[-1])
             )
