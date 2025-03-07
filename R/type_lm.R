@@ -16,11 +16,11 @@
 #' # Use `type_lm()` to pass extra arguments for customization
 #' tinyplot(Sepal.Width ~ Petal.Width, data = iris, type = type_lm(level = 0.8))
 #' @export
-type_lm = function(se = TRUE, level = 0.95) {
+type_lm = function(se = TRUE, level = 0.95, weights = NULL) {
     assert_flag(se)
     out = list(
         draw = draw_ribbon(),
-        data = data_lm(se = se, level = level),
+        data = data_lm(se = se, level = level, weights = weights),
         name = if (isTRUE(se)) "ribbon" else "l"
     )
     class(out) = "tinyplot_type"
@@ -28,16 +28,17 @@ type_lm = function(se = TRUE, level = 0.95) {
 }
 
 
-data_lm = function(se, level, ...) {
+data_lm = function(se, level, weights, ...) {
     fun = function(datapoints, ...) {
         dat = split(datapoints, list(datapoints$facet, datapoints$by))
+        if (!is.null(weights)) dat$.$weights = weights
         dat = lapply(dat, function(x) {
             if (nrow(x) == 0) return(x)
             if (nrow(x) < 3) {
                 x$y = NA
                 return(x)
             }
-            fit = lm(y ~ x, data = x)
+            fit = lm(y ~ x, data = x, weights = weights)
             nd = data.frame(x = seq(min(x$x, na.rm = TRUE), max(x$x, na.rm = TRUE), length.out = 100))
             nd$by = x$by[1]
             nd$facet = x$facet[1]
