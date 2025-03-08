@@ -1,13 +1,15 @@
 ## auxiliary functions for formula/facet parsing
 
-tinyformula = function(formula, facet = NULL) {
+tinyformula = function(formula, facet = NULL, weights = NULL) {
   ## input
   ## - formula:       y ~ x or y ~ x | z or ~ x or ~ x | z
   ## - facet:         ~ a or ~ a + b or b ~ a
+  ## - weights:       ~ w
   ##
   ## output:
   ## - x:      ~ x
   ## - y:      NULL or ~ y
+  ## - weights: NULL or ~ w
   ## - by:     NULL or ~ z or ~ z1 + z2 + ... (use interaction of all)
   ## - xfacet: NULL or ~ a or ~ a + b etc.
   ## - yfacet: NULL or ~ b
@@ -35,6 +37,10 @@ tinyformula = function(formula, facet = NULL) {
     environment(y) = environment(formula)
     y[[2L]] = formula[[2L]]
   }
+  if (!is.null(weights)) {
+    environment(weights) = environment(formula)
+    weights[[2L]] = weights[[2L]]
+  }
   if (is.null(by)) {
     x[[2L]] = formula[[nf]]
   } else {
@@ -57,6 +63,7 @@ tinyformula = function(formula, facet = NULL) {
   if (!is.null(by))     full[[2L]] = call("+", full[[2L]], by[[2L]])
   if (!is.null(xfacet)) full[[2L]] = call("+", full[[2L]], xfacet[[2L]])
   if (!is.null(yfacet)) full[[2L]] = call("+", full[[2L]], yfacet[[2L]])
+  if (!is.null(weights)) full[[2L]] = call("+", full[[2L]], weights[[2L]])
 
   ## return list of all formulas
   return(list(
@@ -65,6 +72,7 @@ tinyformula = function(formula, facet = NULL) {
     by = by,
     xfacet = xfacet,
     yfacet = yfacet,
+    weights = weights,
     full = full
   ))
 }

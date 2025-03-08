@@ -539,6 +539,7 @@ tinyplot.default = function(
     facet = NULL,
     facet.args = NULL,
     data = NULL,
+    weights = NULL,
     type = NULL,
     xlim = NULL,
     ylim = NULL,
@@ -746,7 +747,7 @@ tinyplot.default = function(
   # alias
   if (is.null(bg) && !is.null(fill)) bg = fill
 
-  datapoints = list(x = x, y = y, xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, ygroup = ygroup)
+  datapoints = list(x = x, y = y, weights = weights, xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, ygroup = ygroup)
   datapoints = Filter(function(z) length(z) > 0, datapoints)
   datapoints = data.frame(datapoints)
   if (nrow(datapoints) > 0) {
@@ -1274,6 +1275,7 @@ tinyplot.formula = function(
     data = parent.frame(),
     facet = NULL,
     facet.args = NULL,
+    weights = NULL,
     type = NULL,
     xlim = NULL,
     ylim = NULL,
@@ -1314,7 +1316,7 @@ tinyplot.formula = function(
   legend_args = list(x = NULL)
 
   ## process all formulas
-  tf = tinyformula(formula, facet)
+  tf = tinyformula(formula, facet, weights)
 
   ## set up model frame
   m = match.call(expand.dots = FALSE)
@@ -1336,6 +1338,14 @@ tinyplot.formula = function(
     ynam = names(y)[[1L]]
     if (length(names(y)) > 1L) warning(paste("formula should specify at most one y-variable, using:", ynam))
     y = y[[ynam]]
+  }
+
+  ## extract weights (if any)
+  wgts = tinyframe(tf$weights, mf)
+  if (!is.null(wgts)) {
+    wnam = names(wgts)[[1L]]
+    if (length(names(wgts)) > 1L) warning(paste("formula should specify at most one weights-variable, using:", wnam))
+    wgts = wgts[[wnam]]
   }
 
   ## extract by (if any)
@@ -1384,6 +1394,7 @@ tinyplot.formula = function(
     x = x, y = y, by = by,
     facet = facet, facet.args = facet.args,
     data = data,
+    weights = wgts,
     type = type,
     xlim = xlim,
     ylim = ylim,

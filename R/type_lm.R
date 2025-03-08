@@ -37,7 +37,9 @@ data_lm = function(se, level, ...) {
                 x$y = NA
                 return(x)
             }
-            fit = lm(y ~ x, data = x)
+            weights = NULL
+            if ("weights" %in% names(df)) weights = x$weights
+            fit = lm(y ~ x, data = x, weights = weights)
             nd = data.frame(x = seq(min(x$x, na.rm = TRUE), max(x$x, na.rm = TRUE), length.out = 100))
             nd$by = x$by[1]
             nd$facet = x$facet[1]
