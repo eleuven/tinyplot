@@ -40,6 +40,28 @@ expect_snapshot_plot(f, label = "legend_keyword_outertopright")
 f = function() tinyplot(Temp ~ Day | Month, data = aq, legend = "bottomleft!")
 expect_snapshot_plot(f, label = "legend_keyword_outerbottomleft")
 
+# Horizontal and/or multicolumn legend spacing
+
+aq$Month2 = factor(month.name[aq$Month], levels = month.name[5:9])
+f = function() tinyplot(Temp ~ Day | Month2, data = aq, legend = "bottom!")
+expect_snapshot_plot(f, label = "legend_spacing_horiz_label_bottom")
+
+f = function() tinyplot(
+  weight ~ Time | Chick,
+  data = ChickWeight,
+  type = "ribbon", # not necessary for plot but helps to check some internal logic
+  legend = list("right!", ncol = 3)
+)
+expect_snapshot_plot(f, label = "legend_spacing_ncol_right")
+
+f = function() tinyplot(
+  weight ~ Time | Chick,
+  data = ChickWeight,
+  type = "l",
+  legend = list("bottom!", ncol = 5)
+)
+expect_snapshot_plot(f, label = "legend_spacing_ncol_bottom")
+
 # Long legend titles
 
 f = function() tinyplot(
@@ -153,3 +175,16 @@ expect_snapshot_plot(f, label = "legend_lmar_top")
 
 # reset par
 par(op)
+
+
+# custom legend for new tinyplot.foo s3 method
+f = function() {
+  foo = data.frame(x = 1:2, y = 1:2, grp = c("A", "B"))
+  class(foo) = c("foo", "data.frame")
+  tinyplot.foo = function(x, ...) {
+    legend = list(title = 'New Title')
+    plt(y ~ x | grp, data = x, legend = legend, ...)
+  }
+  plt(foo) 
+}
+expect_snapshot_plot(f, label = "legend_custom_s3")

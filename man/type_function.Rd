@@ -24,10 +24,11 @@ When using \code{type_function()} in a \code{tinyplot()} call, the \code{x} valu
 the range of values to plot on the x-axis.
 }
 \examples{
-# Plot the normal density
-tinyplot(x = -4:4, type = type_function(dnorm))
+# Plot the normal density (default function)
+tinyplot(x = -4:4, type = "function")
+# tinyplot(x = -4:4, type = type_function()) # same
 
-# Extra arguments for the function to plot
+# Customize by passing explicit arguments to your function
 tinyplot(x = -1:10, type = type_function(
   fun = dnorm, args = list(mean = 3)
 ))
@@ -39,7 +40,8 @@ tinyplot(x = -4:4, type = type_function(
 ))
 
 # Custom function example
-# (Here using the `\()` anonymous function syntax introduced in R 4.1.0)
-tinyplot(x = -4:4, type = type_function(fun = \(x) 0.5 * exp(-abs(x))))
+## (Here using `function(x)`, but you could also use the shorter `\(x)`
+## anonymous function syntax introduced in R 4.1.0)
+tinyplot(x = -4:4, type = type_function(fun = function(x) 0.5 * exp(-abs(x))))
 
 }

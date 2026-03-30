@@ -139,7 +139,12 @@ tpar = function(..., hook = FALSE) {
     base_par = opts[base_par]
     if (length(base_par) > 0) {
       if (isTRUE(hook)) {
-        setHook("before.plot.new", function() par(base_par), action = "replace")
+        # append new hook to existing ones
+        new_hooks = list("before.plot.new" = function() par(base_par))
+        set_hooks(new_hooks, action = "append")
+        # save new hook to tinyplot environment for later removal
+        old_hooks = get_environment_variable(".tpar_hooks")
+        set_environment_variable(.tpar_hooks = c(old_hooks, new_hooks))
       } else {
         par_names = names(par(no.readonly = TRUE))
         base_par = base_par[names(base_par) %in% par_names]
@@ -192,11 +197,12 @@ tpar = function(..., hook = FALSE) {
 
 
 # Two levels of priority: .tpar[["name"]] -> par("name")
-get_tpar = function(opts, default = NULL) {
+get_tpar = function(opts, default = NULL, tpar_list = NULL) {
+  if (is.null(tpar_list)) tpar_list = .tpar
   # parameter priority
   # .tpar[["name"]] -> par("name")
   for (o in opts) {
-    tp = .tpar[[o]]
+    tp = tpar_list[[o]]
     if (!is.null(tp)) {
       return(tp)
     } else {
@@ -305,16 +311,14 @@ assert_tpar = function(.tpar) {
   }
 }
 
-
 init_tpar = function(rm_hook = FALSE) {
   rm(list = names(.tpar), envir = .tpar)
 
   if (isTRUE(rm_hook)) {
-    hook = getHook("before.plot.new")
-    if (length(hook) > 0) {
-      # need weird function because of Quarto evaluate::evaluate failure
-      # setHook("before.plot.new", NULL, action = "replace")
-      setHook("before.plot.new", function() NULL, action = "replace")
+    old_hooks = get_environment_variable(".tpar_hooks")
+    if (length(old_hooks) > 0) {
+      remove_hooks(old_hooks)
+      set_environment_variable(.tpar_hooks = NULL)
     }
   }
 
@@ -350,3 +354,7 @@ init_tpar = function(rm_hook = FALSE) {
   # Alpha fill (transparency) default for ribbon and area plots
   .tpar$ribbon.alpha = if (is.null(getOption("tinyplot_ribbon.alpha"))) 0.2 else as.numeric(getOption("tinyplot_ribbon.alpha"))
 }
+
+## initialize internal environment for tpar variables
+.tpar = new.env()
+init_tpar()

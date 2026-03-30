@@ -4,6 +4,9 @@
 #'   are modified versions of histograms or mosaic plots, and particularly
 #'   useful for visualizing factor variables. Note that [`tinyplot`] defaults
 #'   to `type_spineplot()` if `y` is a factor variable.
+#' @param xlevels,ylevels a character or numeric vector specifying the ordering of the
+#'   levels of the `x` and `y` variables (if character) or the corresponding indexes
+#'   (if numeric) for the plot.
 #' @inheritParams graphics::spineplot
 #' @examples
 #' # "spineplot" type convenience string
@@ -47,7 +50,13 @@
 #'   type = type_spineplot(weights = ttnc$Freq),
 #'   palette = "Dark 2", facet.args = list(nrow = 1), axes = "t"
 #' )
-#' 
+#'
+#' # Reorder x and y variable categories either by their character levels or numeric indexes
+#' tinyplot(
+#'   Survived ~ Sex, facet = ~ Class, data = ttnc,
+#'   type = type_spineplot(weights = ttnc$Freq, xlevels = c("Female", "Male"), ylevels = 2:1)
+#' )
+#'
 #' # Note: It's possible to use "by" on its own (without faceting), but the
 #' # overlaid result isn't great. We will likely overhaul this behaviour in a
 #' # future version of tinyplot...
@@ -56,10 +65,10 @@
 #' )
 #' 
 #' @export
-type_spineplot = function(breaks = NULL, tol.ylab = 0.05, off = NULL, ylevels = NULL, col = NULL, xaxlabels = NULL, yaxlabels = NULL, weights = NULL) {
+type_spineplot = function(breaks = NULL, tol.ylab = 0.05, off = NULL, xlevels = NULL, ylevels = NULL, col = NULL, xaxlabels = NULL, yaxlabels = NULL, weights = NULL) {
   col = col
   out = list(
-    data = data_spineplot(off = off, breaks = breaks, ylevels = ylevels, xaxlabels = xaxlabels, yaxlabels = yaxlabels, weights = weights),
+    data = data_spineplot(off = off, breaks = breaks, xlevels = xlevels, ylevels = ylevels, xaxlabels = xaxlabels, yaxlabels = yaxlabels, weights = weights),
     draw = draw_spineplot(tol.ylab = tol.ylab, off = off, col = col, xaxlabels = xaxlabels, yaxlabels = yaxlabels),
     name = "spineplot"
   )
@@ -68,13 +77,9 @@ type_spineplot = function(breaks = NULL, tol.ylab = 0.05, off = NULL, ylevels = 
 }
 
 #' @importFrom grDevices nclass.Sturges
-data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabels = NULL, yaxlabels = NULL, weights = NULL) {
-    fun = function(
-      datapoints,
-      by = NULL, col = NULL, bg = NULL, palette = NULL,
-      facet = NULL, facet.args = NULL, xlim = NULL, ylim = NULL, axes = TRUE, xaxt = NULL, yaxt = NULL,
-      ...
-    ) {
+data_spineplot = function(off = NULL, breaks = NULL, xlevels = xlevels, ylevels = ylevels, xaxlabels = NULL, yaxlabels = NULL, weights = NULL) {
+    fun = function(settings, ...) {
+        env2env(settings, environment(), c("datapoints", "xlim", "ylim", "facet", "facet.args", "by", "xaxb", "yaxb", "null_by", "null_facet", "null_palette", "col", "bg", "axes", "xaxt", "yaxt"))
       
         ## process weights
         if (!is.null(weights)) {
@@ -86,16 +91,16 @@ data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabel
         datapoints$weights = weights
         
         ## process x variable
-        if(is.factor(datapoints$x)) {
+        if (is.factor(datapoints$x)) {
             breaks = NULL
             off = if(is.null(off)) 0.02 else off/100
             if (is.null(xlim)) xlim = c(0, 1 + (nlevels(datapoints$x) - 1L) * off)
         } else {
             off = 0
             if (is.null(xlim)) xlim = c(0, 1)
-    	    x = as.numeric(datapoints$x)
+    	      x = as.numeric(datapoints$x)
             if (is.null(breaks)) {
-                breaks = if(is.null(weights)) nclass.Sturges(x) else ceiling(log2(sum(weights)) + 1)
+              breaks = if (!is.null(xaxb)) xaxb else if (is.null(weights)) nclass.Sturges(x) else ceiling(log2(sum(weights)) + 1)
 	    }
             breaks = as.numeric(breaks)
             if (length(breaks) == 1L) {
@@ -111,7 +116,6 @@ data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabel
 
         ## process y variable
         if (!is.factor(datapoints$y)) datapoints$y = factor(datapoints$y)
-        if (!is.null(ylevels)) datapoints$y = factor(y, levels = if(is.numeric(ylevels)) levels(y)[ylevels] else ylevels)
         if (is.null(ylim)) ylim = c(0, 1)
 
         ## adjust facet margins
@@ -119,12 +123,26 @@ data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabel
           facet.args[["fmar"]] = c(2, 2, 2, 2)
         }
         
+        x_by = identical(datapoints$x, datapoints$by)
+        y_by = identical(datapoints$y, datapoints$by)
+        
         x.categorical = is.factor(datapoints$x)
+        if (!is.null(xlevels) && x.categorical) {
+          xlevels = if(is.numeric(xlevels)) levels(datapoints$x)[xlevels] else xlevels
+          if (anyNA(xlevels) || !all(xlevels %in% levels(datapoints$x))) warning("not all 'xlevels' correspond to levels of 'x'")
+          datapoints$x = factor(datapoints$x, levels = xlevels)
+          if (x_by) datapoints$by = datapoints$x
+        }
+        if (!is.null(ylevels)) {
+          ylevels = if(is.numeric(ylevels)) levels(datapoints$y)[ylevels] else ylevels
+          if (anyNA(ylevels) || !all(ylevels %in% levels(datapoints$y))) warning("not all 'ylevels' correspond to levels of 'y'")
+          datapoints$y = factor(datapoints$y, levels = ylevels)
+          if (y_by) datapoints$by = datapoints$y
+        }
+        
         x = datapoints$x
         y = datapoints$y
         
-        x_by = identical(datapoints$x, datapoints$by)
-        y_by = identical(datapoints$y, datapoints$by)
         # if either x_by or y_by are TRUE, we'll only split by facets and then
         # use some simple logic to assign colouring on the backend
         if (isTRUE(x_by) || isTRUE(y_by)) {
@@ -196,6 +214,12 @@ data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabel
       
         ## axis labels
         yaxlabels = if(is.null(yaxlabels)) levels(y) else rep_len(yaxlabels, ny)
+        if (!is.null(yaxb)) {
+          # yaxlabels = yaxlabels[yaxlabels %in% yaxb]
+          ## rather use the "" assignment workaround below, since otherwise we 
+          ## get a mismatch between the label names and ticks 
+          yaxlabels[!(yaxlabels %in% yaxb)] = ""
+        }
         if(x.categorical) {
           xaxlabels = if(is.null(xaxlabels)) {
             levels(x)
@@ -212,51 +236,62 @@ data_spineplot = function(off = NULL, breaks = NULL, ylevels = ylevels, xaxlabel
         
         # catch for x_by / y/by
         if (isTRUE(x_by)) datapoints$by = factor(rep(xaxlabels, each = ny)) # each x label extends over ny rows
-        if (isTRUE(y_by)) datapoints$by = factor(rep(yaxlabels, length.out = nrow(datapoints)))
+        if (isTRUE(y_by)) datapoints$by = factor(rep_len(yaxlabels, nrow(datapoints)))
           
         ## grayscale flag
-        grayscale = length(unique(datapoints[["by"]])) == 1 && is.null(palette) && is.null(.tpar[["palette.qualitative"]])
-        
-        out = list(
-          x = c(datapoints$xmin, datapoints$xmax), 
-          y = c(datapoints$ymin, datapoints$ymax),
-          ymin = datapoints$ymin, 
-          ymax = datapoints$ymax, 
-          xmin = datapoints$xmin, 
-          xmax = datapoints$xmax, 
-          col = col,
-          bg = bg,
-          datapoints = datapoints,
-          by = if (length(unique(datapoints$by)) == 1) by else datapoints$by, 
-          facet = if (length(unique(datapoints$facet)) == 1) facet else datapoints$facet,
-          axes = FALSE,
-          frame.plot = FALSE,
-          xaxt = "n",
-          yaxt = "n",
-          xaxs = "i",
-          yaxs = "i",
-          ylabs = yaxlabels,
-          type_info = list(
-            off = off,
-            x.categorical = x.categorical,
-            nx = nx,
-            ny = ny,
-            xat = xat,
-            yat = yat,
-            xaxlabels = xaxlabels,
-            yaxlabels = yaxlabels,
-            breaks = breaks,
-            axes = axes,
-            xaxt = xaxt, 
-            yaxt = yaxt,
-            grayscale = grayscale,
-            x_by = x_by,
-            y_by = y_by
-          ),
-          facet.args = facet.args
+        grayscale = null_by && null_palette && is.null(.tpar[["palette.qualitative"]])
+
+        x = c(datapoints$xmin, datapoints$xmax)
+        y = c(datapoints$ymin, datapoints$ymax)
+        ymin = datapoints$ymin
+        ymax = datapoints$ymax
+        xmin = datapoints$xmin
+        xmax = datapoints$xmax
+        by = if (null_by) by else datapoints$by
+        facet = if (null_facet) facet else datapoints$facet
+
+        # Save original values for type_info before overwriting
+        axes_orig = axes
+        xaxt_orig = xaxt
+        yaxt_orig = yaxt
+
+        axes = FALSE
+        frame.plot = FALSE
+        xaxt = "n"
+        yaxt = "n"
+        xaxs = "i"
+        yaxs = "i"
+        ylabs = yaxlabels
+        type_info = list(
+          off = off,
+          x.categorical = x.categorical,
+          nx = nx,
+          ny = ny,
+          xat = xat,
+          yat = yat,
+          xaxlabels = xaxlabels,
+          yaxlabels = yaxlabels,
+          breaks = breaks,
+          axes = axes_orig,
+          xaxt = xaxt_orig,
+          yaxt = yaxt_orig,
+          grayscale = grayscale,
+          x_by = x_by,
+          y_by = y_by
         )
         
-        return(out)
+        # legend customizations
+        settings$legend_args[["pch"]] = settings$legend_args[["pch"]] %||% 22
+        settings$legend_args[["pt.cex"]] = settings$legend_args[["pt.cex"]] %||% 3.5
+        settings$legend_args[["pt.lwd"]] = settings$legend_args[["pt.lwd"]] %||% 0
+        settings$legend_args[["y.intersp"]] = settings$legend_args[["y.intersp"]] %||% 1.25
+        settings$legend_args[["seg.len"]] = settings$legend_args[["seg.len"]] %||% 1.25
+        
+        env2env(environment(), settings, c(
+          "x", "y", "ymin", "ymax", "xmin", "xmax", "col", "bg", "datapoints",
+          "by", "facet", "axes", "frame.plot", "xaxt", "yaxt", "xaxs", "yaxs",
+          "ylabs", "type_info", "facet.args"
+        ))
         
     }
     return(fun)

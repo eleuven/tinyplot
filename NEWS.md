@@ -4,31 +4,329 @@ _If you are viewing this file on CRAN, please check the
 [latest NEWS](https://grantmcdermott.com/tinyplot/NEWS.html) on our website
 where the formatting is also better._
 
-## 0.3.0.99 (dev version)
+## v0.6.1
 
-New features:
+### Aesthetic changes
+
+- The legend plot characters for the `"pointrange"` and `"errorbar"` types now
+  include a line, to better resemble the actual plot elements (#533 @grantmcdermott)
+
+### New features
+
+- Support for univariate formulas, e.g., `y ~ 1`, `~ x`, and `~ 0`. These are
+  translated to `x = NULL` or `y = NULL` in the default method call, with
+  automatic type inference: `y ~ 1` (numeric) produces a histogram, `y ~ 1`
+  (factor) produces a barplot, `~ x` (factor) produces a barplot, and `~ x`
+  (numeric) produces a scatterplot against the index. The `~ 0` form is useful
+  for types that don't require x/y, such as `segments` and `rect`. Thanks to
+  @katrinabrock for the suggestion. (#534 @zeileis, @grantmcdermott)
+
+### Bug fixes
+
+- Fixed Issue #545 where xaxs/yaxs were not restored when set by an internal
+  function. (#545 @zeileis)
+- Fixed Issue #553 where `facet.args = list(free = TRUE)` lead to an error
+  when used used without facets. Thanks to @katrinabrock for the report.
+  (#554 @zeileis)
+- Fixed `type_ridge()` fill errors for themes that set a qualitative palette,
+  e.g. `"clean2"`. (#564 @grantmcdermott)
+- Fixed plot clipping when using ephemeral `theme = "default"` with a legend
+  and `tinyplot_add()`. Thanks to @katrinabrock for the report in #557.
+  (#565 @grantmcdermott)
+- Several improvements/fixes to jittered plots and layering:
+  - Jittered plots now support Date/POSIXt axes. Thanks to @wachtermh for the
+     bug report and @vincentarelbundock for the code contribution. (#327)
+  - `tinyplot_add(type = "jitter")` no longer errors when layered on top of
+    boxplot, violin, or similar categorical plot types. (#560 @grantmcdermott)
+  - Jitter layers added via `tinyplot_add()` now align correctly with grouped
+    (offset) boxplot, violin, and ridge base layers. (#561 @grantmcdermott)
+
+### Documentation
+
+- Improved guidance for
+  [custom types](https://grantmcdermott.com/tinyplot/vignettes/types.html#custom-types)
+  in the `Types` vignette. (#531 @grantmcdermott)
+
+### Internals
+
+- We now encourage type-specific legend customizations within the individual
+  `type_<type>` constructors. (#531 @grantmcdermott)
+- Change maintainer email address.
+- Add `.CLAUDE.md` context file for AI-assisted development. (#563 @grantmcdermott)
+- Quality of life website improvements. (#566 @grantmcdermott)
+  - Fix Makefile website target (remove circular dep, fix comment)
+  - Enable parallel + freeze for faster local builds
+  - Replace iconify extension with native Bootstrap icon for Bluesky
+- Add GitHub Actions workflow for reverse dependency checks. Triggered by
+  pushing a `revdep*` branch. (#567 @grantmcdermott)
+
+## v0.6.0
+
+### Breaking changes
+
+- "Breaking" change for internal development and custom types only:
+  The plot settings and parameters from individual `tinyplot` calls are now
+  stored in a dedicated (temporary) internal environment called `settings`,
+  which can be accessed and modified by type-specific functions. This change
+  will enable various internal enhancements, from improving the modularity and
+  maintainability of the `tinyplot` codebase, to reducing memory overhead and
+  performance (since we require fewer object copies). Looking ahead, we also
+  expect that it will make it easier to support new features and integration 
+  with downstream packages. Most `tinyplot` users should be unaffected by these
+  internal changes. However, users who have defined their own custom types will
+  need to make some adjustments to match the new `settings` logic; details are
+  provided in the updated `Types` vignette. (#473 @vincentarelbundock and @grantmcdermott)
+- The ancillary `fixed.pos` argument for dodged plots has been renamed to
+  `fixed.dodge` to avoid ambiguity, especially when passed down from a top-level
+  `tinyplot(...)` call. (#528 @grantmcdermott) 
+
+### New features
+
+- `type_text()` gains a `family` argument for controlling the font family,
+  separate to the main plot text elements. (#494 @grantmcdermott)
+- Expanded `dodge` argument capabilities and consistency for dealing with
+  overlapping groups:
+  - `dodge` argument now also supported by `type_lines()`, `type_points()`, and
+    `type_ribbon()`. (#522, #528 @grantmcdermott)
+  - We now enforce that numeric `dodge` values must be in the range `[0,1)`.
+    (#526 @grantmcdermott)
+  - Alongside numeric values, we now support a logical `dodge = TRUE` argument,
+    which gives automatic width spacing based on the number of groups. (#525 @grantmcdermott)
+  - Renamed ancillary argument `fixed.pos` -> `fixed.dodge`, per the breaking
+    change above. (#528 @grantmcdermott)
+
+### Bug fixes
+
+- For bubble plots, we now drop the minimum legend category (label) if it is
+  equal to 0. The previous behaviour was just an artifact of the `pretty` breaks
+  algorithm that we use to create discrete legend categories. The interior plot
+  elements, e.g. bubble points, are unaffected. (#498 @grantmcdermott)
+- `type_text()` now defaults to displaying `y` values if an explicit `labels`
+  arg is not provided, mirroring the behaviour of the base `text()` function.
+  (#501 @grantmcdermott)
+- Determining the last call of the `tinyplot()` generic in preparation for
+  `tinyplot_add()` is now more robust so that it is compatible with `do.call()`
+  again (reported by @FlorianSchwendinger). This is achieved by inspecting
+  the functions called rather than just their names. (#504 @zeileis)
+- Legend labels are now correct if `by` is logical. Thanks to @TCornulier for
+  the report. (#512 @grantmcdermott)
+- Axis limits are now correctly calculated for factor (and character) variables,
+  by coercing to numeric first. We also avoid the redundancy of re-calculating
+  axis limits for secondary plot layers. (#513 @grantmcdermott)
+- Fixed lazy evaluation bug where `legend` passed as a symbol through S3 methods
+  (e.g., `tinyplot.foo`) would fail. (#515 @grantmcdermott)
+- Added layers, particularly from `tinyplot_add()`, should now respect the
+  x-axis order of the original plot layer. This should ensure that we don't end
+  up with misaligned layers. For example, when ribbon is added on top of an
+  errorbar plot. (#517, #520, #523, #526 @grantmcdermott)
+- Custom axis titles work properly for one-sided (formula) bar plots. Thanks to
+  @lbelzile for the report in #423. (#527 @grantmcdermott)
+
+
+### Documentation
+
+- Add a "recession bars" section to the `Tips & tricks` vignette.
+  (#503 @grantmcdermott)
+
+- Point out more explicitly how the `draw` argument is evaluated within
+  `tinyplot()` and that it thus has access to the local definition to all
+  variables such as `x` and `y` etc. (#507 @zeileis)
+
+## v0.5.0
+
+### New features
+
+- Added support for "bubble" scatter plots, allowing for point size scaling via
+  an appropriate `cex` argument (e.g., a continuous variable from your dataset).
+  Simultaneously enables dual-legend support for combined size + color mappings.
+  The updated `?type_points` documentation contains several examples.
+  (#433 @grantmcdermott)
+- Improved horizontal legend spacing, as well as multicolumn legend support. A
+  new example in the "Tips & tricks" vignette demonstrates the latter.
+  (#446 @grantmcdermott)
+- Univariate boxplots (without grouping variable) are now handled in
+  `tinyplot.default()`, so that `tinyplot(x, type = "boxplot")` and
+  `tinyplot(~ x, type = "boxplot")` essentially produce the same output as
+  `boxplot(x)`. (#454 @zeileis)
+- `type_errorbar()` and `type_point_range()` get a `dodge` argument.
+  (#461 @vincentarelbundock)
+- The new `tinyplot(..., theme = <theme>)` argument enables users to invoke
+  ephemeral themes as an alternative to the persistent themes that follow
+  `tinytheme(<theme>)`. (#484 @grantmcdermott)
+- Similarly to how the `x/yaxl` arguments allow for axes label adjustment, users
+  can now adjust the legend labels too with
+  `tinyplot(..., legend = list(labeller = <labeller>))`. The `labeller` argument
+  is passed to `tinylabel`; see the latter's help documentation for examples.
+  (#488 @grantmcdermott)
+
+### Bug fixes
+
+- `tinyplot_add()` now evaluates the additional call in the environment from
+  which `tinyplot_add()` is called so that it also works in non-base environments
+  such as in function definitions. Additionally, the call matching is now more
+  precise, matching only `tinyplot()` or `plt()` or their fully-qualified
+  counterparts (with `tinyplot::` prefix). Finally, the internals where these
+  calls are stored are streamlined, avoiding modifying the user-visible
+  `options()`. (#460 @zeileis)
+- Fixed several minor `tinylabel` bugs. (#468 @grantmcdermott)
+  - `tinylabel(x, "%")` is more precise, preserving unique levels of `x` through
+     automatic decimal level determination. Thanks to @etiennebacher for the
+     bug report in #449.
+  - Numeric labellers now work on appropriate `x`/`y` variables, even if the
+    plot type internally coerces it to factor (e.g., `"boxplot"`)
+- `type_text()` can now also deal with factor `x`/`y` variables by converting
+  them to numeric which helps to add text to barplots etc. (#470 @zeileis)
+- Fixed some `tinytheme()` bugs.
+  - Sourced (non-interactive) scripts with `tinytheme()` calls now inherit the
+    correct parameters and spacing. (#475, #481 @grantmcdermott)
+  - Custom `cex` theme settings are now reset correctly. (#482 @grantmcdermott)
+
+### Documentation
+
+- @grantmcdermott's _useR! 2025_ **tinyplot** presentation has been added to the
+  website as a standalone
+  [vignette](https://grantmcdermott.com/tinyplot/vignettes/useR2025/useR2025.html).
+
+### Internals
+
+- Move `altdoc` from `Suggests` to `Config/Needs/website`.
+  Thanks to @etiennebacher for the suggestion and to @eddelbuettel for help
+  with the CI implementation.
+- Add a `devcontainer.json` file for remote testing. (#480 @grantmcdermott) 
+
+## v0.4.2
+
+### New features
+
+- `type_text()` gains `xpd` and `srt` arguments for controlling text clipping
+  and rotation, respectively. (#428 @grantmcdermott)
+- Add `xlevels` (in addition to `ylevels`) in `type_spineplot()` for spine plots
+  with categorical `x` variable. (#431 @zeileis)
+
+### Bug fixes
+
+- Fixed a long-standing issue whereby resizing the plot window would cause
+  secondary plot layers, e.g. from `plt_add()`, to become misaligned in 
+  faceted plots (#313). This also resolves a related alignment + layering issue
+  specific to the Positron IDE
+  ([positron#7316](https://github.com/posit-dev/positron/issues/7316)).
+  As an aside, `tinyplot` should now be fully compatible with Positron. (#438 @grantmcdermott)
+- Fixed a bug that resulted in y-axis labels being coerced to numeric for
+  `"p"`-alike plot types (including `"jitter"`) if `y` is a factor or character.
+- Safer handling of pre-plot hooks. Resolves an issue affecting how `tinyplot`
+  behaves inside loops, particularly for themed plots where only the final plot
+  was being drawn in Quarto/RMarkdown contexts. Special thanks to @hadley and @cderv
+  for helping us debug. (#425 @vincentarelbundock)
+- The `xlevels` argument of `type_barplot()` could not handle numeric indexes correctly.
+  (#431 @zeileis)
+- Addressed several shortcomings of the straight line family of types (`type_hline`,
+  `type_vline`, `type_abline`) through better recycling logic. For example,
+  these types now work correctly across non-`by` facets. Simultaneously, users
+  can also call them in a base plot layer, relaxing the requirement that they
+  must be called as part of a subsequent plot layer via `tinyplot_add()`. (#422 @grantmcdermott)
+
+## v0.4.1
+
+### Bug fixes
+
+- Fix a narrow `tinytheme("ridge")` regression that was accidentally introduced in
+  v0.4.0, which was causing a palette mismatch for gradient legends. (#415 @grantmcdermott)
+
+### Misc
+
+- Revert minimum compatible R version to 4.0.0 (#416 @grantmcdermott)
+
+## v0.4.0
+
+### New features:
+
+#### New plot types
+
+- `"barplot"` / `type_barplot()` for bar plots. This closes out
+  one of the last remaining canonical base plot types that we wanted to provide
+  a native `tinyplot` equivalent for. (#305 and #360 @zeileis and @grantmcdermott) 
+- `"violin"` / `type_violin()` for violin plots. (#354 @grantmcdermott)
+
+#### Other new features
 
 - `tinyplot(..., file = "*.pdf")` will now default to using `cairo_pdf()` if
   cairo graphics are supported on the user's machine. This should help to ensure
-  better fidelity of (non-standard) fonts in PDFs. (#311 @grantcdermott)
-- The palette argument now accepts a vector or list of manual colours, e.g.
+  better fidelity of (non-standard) fonts in PDFs. (#311 @grantmcdermott)
+- The `palette` argument now accepts a vector or list of manual colours, e.g.
   `tinyplot(..., palette = c("cyan4", "hotpink, "purple4"))`, or
   `tinytheme("clean", palette = c("cyan4", "hotpink, "purple4"))` (#325 @grantmcdermott)
+- Two new sets of top-level arguments allow for greater axis customization:
+  - `xaxb`/`yaxb` control the manual break points of the axis tick marks. (#400 @grantmcdermott)
+  - `xaxl`/`yaxl` apply a formatting function to change the appearance of the
+    axis tick labels. (#363, #391 @grantmcdermott)
+    
+  These `x/yaxb` and `x/yaxl` arguments can be used in complementary fashion;
+  see the new (lower-level) `tinylabel` function documentation. For example:
+  ```r
+  tinyplot((0:10)/10, yaxb = c(.17, .33, .5, .67, .83), yaxl = "%")
+  ```
+- The `x/ymin` and `x/ymax` arguments can now be specified directly via the
+  `tinyplot.formula()` method thanks to better NSE processing. For example,
+  instead of having to write
+  ```r
+  with(dat, tinyplot(x = x, y = y, by = by ymin = lwr, ymax = upr))
+  ```
+  users can now do
+  ```r
+  tinyplot(y ~ x | by, dat, ymin = lwr, ymax = upr)
+  ```
+  
+  Underneath the hood, this works by processing these NSE arguments as part of
+  formula `model.frame()` and reference against the provided dataset. We plan to
+  extend the same logic to other top-level formula arguments such as `weights`
+  and `subset` in a future version of tinyplot.
+  
+### Bug fixes:
 
-Bugs fixes:
-
-- The `cex` argument should be respected when using `type="bg"`. Thanks to
-  @rjknell for report #307 and @vincentarelbundock for the fix.
-- The `lwd` argument is now correctly passed down to `pt.lwd` for type `"p"`,
-  which sets proper line weight for the border of pch symbols in legend. Report
-  in #319 and fix in #320 by @kscott-1.
+- The `tinyplot(..., cex = <cex>)` argument should be respected when using
+  `type = "b"`. Thanks to @rjknell for report #307 and @vincentarelbundock for
+  the fix.
+- The `tinyplot(..., lwd = <lwd>)` argument is now correctly passed down to
+  `pt.lwd` for type `"p"`, which sets proper line weight for the border of `pch`
+  symbols in legend. Report in #319 and fix in #320 by @kscott-1.
 - Passing `x` and/or `y` as character variables now triggers the same default
   plot type behaviour as factors, e.g. boxplots. (#323 @grantmcdermott)
 - Scatter plots (`type_points()`/`"p"`) now work even if `x` or `y` is a factor
   or character variable. (#323 @grantmcdermott)
-- The `col` argument now accepts a numeric index. (#330 @grantmcdermott)
+- The `tinyplot(..., col = <col>)` argument now accepts a numeric index.
+  (#330 @grantmcdermott)
+- `type_text()` now accepts non-character labels. (#336 @grantmcdermott)
+- The `tinyplot(..., pch = <pch>)` argument now accepts character literals, e.g.
+  `pch = "."`. (#338 @grantmcdermott)
+- Line plots (`type_lines()`/`"l"`) now pass on the `bg` argument to the
+  drawing function. Thanks to @wviechtb for report in #355 (@zeileis).
+- Fixed dynamic y-axis margin spacing for flipped `"boxplot"` and `"jitter"`
+  types. Thanks to @eddelbuettel for the report in #357 (@grantmcdermott).
+- Fixed dynamic x-axis margin spacing for perpendicular (vertical) label text,
+  i.e. cases where `las = 2` or `las = 3`. (#369 @grantmcdermott)
+- Better integration with the Positron IDE graphics pane. Thanks to @thomasp85
+  for the report and helpful suggestions. (#377, #394 @grantmcdermott)
+  - The one remaining Positron issue at present is calling `plt_add()` on a
+    faceted plot, but this appears to be an upstream limitation/bug
+    [positron#7316](https://github.com/posit-dev/positron/issues/7316).
+- Fixed a bug that resulted in y-axis labels being coerced to numeric for
+  `"p"`-alike plot types (including `"jitter"`) if `y` is a factor or character.
+  (#387 @grantmcdermott)
+- Fix a colour recycling regression introduced in v0.3.0. Coincidentally, we
+  have improved the consistency across `palette` and `col` arguments,
+  particularly with respect to recycling behaviour. Thanks to @eddelbuettel for
+  the report (#352) and @grantmcdermott for the fix (#410).
 
-Internals:
+### Website:
+
+- Improved column spacing of Arguments in the References section of the website.
+  (#328 thanks to @etiennebacher's upstream `altdoc` fix)
+- Added a new "Ticks & tips" vignette for non-standard workarounds.
+  (#381 @vincentarelbundock)
+- Improved website theme and navigation layout, especially on mobile.
+  (#395, #411, #413 @zeileis and @retostauffer)
+
+### Internals:
 
 - The order of the nested loop for drawing interior plot elements has been
   switched. We now loop over facets first (outer loop) before looping over
@@ -36,12 +334,7 @@ Internals:
   logic was mostly an artifact of development inertia and this new nesting logic
   should simplify the creation of certain plot types. (#331 @grantmcdermott)
 
-
-Misc:
-- Improved column spacing of Arguments in the References section of the website.
-  (#328 thanks to @etiennebacher's upstream `altdoc` fix)
-
-## 0.3.0
+## v0.3.0
 
 ### New features
 
@@ -216,7 +509,7 @@ grouping variables (thanks to @strengjacke for reporting #213).
   - The new functional type processing system also means that each type now
     has its own help page (e.g. `?type_hist`, `type_ridge`, etc.)
 
-## 0.2.1
+## v0.2.1
 
 New Features:
 
@@ -265,7 +558,7 @@ Internals:
 - Revamped formula processing that allows for better sanity checking and
 edge-case logic. (#197 @zeileis)
 
-## 0.2.0
+## v0.2.0
 
 New features:
 
@@ -293,7 +586,7 @@ Misc:
 
 - Various documentation improvements.
 
-## 0.1.0
+## v0.1.0
 
 Our first CRAN submission! This v0.1.0 release includes the following new
 features and updates:
@@ -389,7 +682,7 @@ approach). (#145 @vincentarelbundock & @grantmcdermott)
 calculates `density` grid coords. (#150 @grantmcdermott)
 
 
-## 0.0.5
+## v0.0.5
 
 **IMPORTANT BREAKING CHANGE:**
 
@@ -433,7 +726,7 @@ see the following GitHub comment, as well as the discussion that preceded it:
 https://github.com/grantmcdermott/plot2/issues/22#issuecomment-1928472754
 
 
-##  0.0.4
+##  v0.0.4
 
 Website:
 
@@ -490,7 +783,7 @@ outer gap to outside of the graphics device unchanged. (#94 @grantmcdermott)
 - Fix bug where grid wasn't auto-expanding correctly for area plots. (#92
 @grantmcdermott)
 
-##  0.0.3
+##  v0.0.3
 
 Breaking changes:
 
@@ -528,7 +821,7 @@ Bug fixes:
 - Setting a global palette, e.g. `palette("ggplot2")` is now respected. (#44
 @grantmcdermott)
 
-##  0.0.2
+##  v0.0.2
 
 Breaking changes:
 
@@ -555,6 +848,6 @@ Project:
 - @vincentarelbundock and @zeileis have joined the project as core contributors.
 🎉
 
-##  0.0.1
+##  v0.0.1
 
 * Initial release on GitHub.

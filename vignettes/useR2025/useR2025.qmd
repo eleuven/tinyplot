@@ -1,0 +1,1122 @@
+---
+# title: tinyplot
+title: "<br/><br/><br/>"
+subtitle: Lightweight extension of the base R graphics system
+format:
+   clean-revealjs:
+     title-slide-attributes:
+       data-background-image: "img/background.png"
+       data-background-size: contain
+execute:
+  echo: true
+author:
+  - name: Grant McDermott
+    orcid: 0000-0001-7883-8573
+    email: gmcd@amazon.com
+    # affiliations: Amazon.com | University of Oregon
+institute: "userR! 2025"
+date: 2025-08-09
+bibliography: refs.bib
+extensions: iconify
+---
+
+## Disclaimer
+
+**tinyplot** was developed in my own time and does not relate to my position at Amazon.
+
+All views expressed during this talk are my own, and do not necessarily reflect the views of my employer.
+
+# Motivating example
+
+Everyone's favourite penguins...
+
+## `base::plot`
+
+### Simple scatter plot
+
+```{r}
+plot(bill_dep ~ bill_len, data = penguins)
+```
+
+## `base::plot`
+
+### Let's add some grouping
+
+```{r}
+plot(bill_dep ~ bill_len, data = penguins, col = species)
+```
+
+**NB:** `col = species` works here because `species` is a factor.
+
+## `base::plot`
+
+### Add a legend
+
+```{r}
+plot(bill_dep ~ bill_len, data = penguins, col = species)
+legend("topright", legend = unique(penguins$species), col = 1:3, pch = 1, title = "Species")
+```
+
+::: {.fragment}
+**Q:** Can you spot the error?
+:::
+
+## `base::plot`
+
+### Add a legend
+
+```{r}
+plot(bill_dep ~ bill_len, data = penguins, col = species)
+legend("topright", legend = levels(penguins$species), col = 1:3, pch = 1, title = "Species")
+```
+
+ **A:** We should have used `levels(species)`, not `unique(species)`.
+
+
+## `base::plot`
+
+### How about a different plot type?
+
+```{r}
+plot(bill_dep ~ bill_len, data = penguins, col = species, type = 'b')
+```
+
+Ugh... our grouped coloring logic only works for the "points" components.
+
+## `base::plot`
+
+### Problems and pitfalls of our base plot approach
+
+- How do we automate the legend mapping and avoid manual error?
+- What if we want to place the legend outside of the plot region?
+- How do we group by additional variables?
+- What if we want groups with a different plot type (e.g, lines)?
+- What if we need to group by a continuous variable?
+- What if we need to facet by another variable?
+- What if we want to add a summary function, e.g. regression fit?
+- The plots are kind of ugly. Can we make them look better?
+- ...
+
+# Enter tinyplot
+
+
+:::: {.columns}
+
+::: {.column width="20%"}
+
+![](img/logo.svg)
+
+:::
+::: {.column width="80%"}
+
+Install:
+
+```r
+install.packages("tinyplot") # cran
+# install.packages("tinyplot", repos = "https://grantmcdermott.r-universe.dev") # dev
+```
+
+Load:
+
+```{r}
+library("tinyplot")
+```
+
+:::
+
+::::
+
+\
+
+::: {.callout-tip}
+In the plots that follow, `plt(...)` is a shorthand alias for `tinyplot(...)`.
+:::
+
+## `tinyplot::plt`
+
+### Simplest case: drop-in replacement for `base::plot`
+
+```{r}
+plt(bill_dep ~ bill_len, data = penguins)
+```
+
+
+::: {.fragment}
+But we can do a lot more than that...
+:::
+
+## `tinyplot::plt`
+
+### How do we automate the legend mapping?
+
+```{r}
+plt(bill_dep ~ bill_len | species, data = penguins)
+```
+
+## `tinyplot::plt`
+
+### How do we group by additional variables?
+
+```{r}
+plt(bill_dep ~ bill_len | sex + species, data = penguins, pch = "by")
+```
+
+## `tinyplot::plt`
+
+###  What if we want groups with a different plot type?
+
+```{r}
+plt(bill_dep ~ bill_len | species, data = penguins, type = "b")
+```
+
+## `tinyplot::plt`
+
+### What if we need to group by a continuous variable?
+
+```{r}
+plt(bill_dep ~ bill_len | body_mass, data = penguins)
+```
+
+## `tinyplot::plt`
+
+### What if we need to facet by another variable?
+
+```{r}
+plt(bill_dep ~ bill_len | species, data = penguins, facet = ~island)
+```
+
+## `tinyplot::plt`
+
+### What if we want to add a summary function, e.g. regression fit?
+
+```{r}
+plt(bill_dep ~ bill_len | species, data = penguins, facet = ~island)
+plt_add(type = "lm")
+```
+
+## `tinyplot::plt`
+
+### The plots are kind of ugly. Can we make them look better?
+
+```{r}
+#| out-width: "75%"
+tinytheme("clean") # or "clean2", "minimal", "ipsum", "dark", "tufte", ...
+plt(bill_dep ~ bill_len | species, data = penguins, facet = ~island)
+plt_add(type = "lm")
+```
+
+**NB:** Themes are persistent; subsequent (tiny)plots will inherit this aesthetic.
+
+# Background
+
+## Origin story
+### Two sources of frustration:
+
+#### Package development 📦
+
+- Annoying trade-offs for supporting basic viz. methods for my packages.
+- "I just need a simple errorbar here. Do I really have to finagle `segments` to make this work?" "What about a legend..?" 
+
+#### Teaching 🎓
+
+- Teach simple viz. approaches vs. scalability down the road.
+- Base plotting is great for simple plots, but quickly loses its appeal for more complex plots. (And `ggplot2`/`lattice` have different APIs.)
+
+
+## grid vs graphics
+### R has two low-level graphics systems
+
+![Note: Adapted from @murrell2023updates.](img/rgraphics.png)
+
+## Base graphics in R
+### Very flexible... but tricksy
+
+::::: {.columns}
+
+:::: {.column width="60%"}
+
+Base **graphics** can produce amazing plots.
+
+:::{.fragment fragment-index=1}
+- `plot()` is just an (opinionated) wrapper around lower-level functions. [@koncevicius2020baseplottingwrappers]
+:::
+
+:::{.fragment fragment-index=2}
+- This is very powerful in expert hands. [@mayakonda2022basegraphics]
+:::
+
+::::
+
+:::: {.column width="40%"}
+::: {.r-stack}
+![](img/karolis.png){.fragment fragment-index=1}
+
+![](img/poisonalien.png){.fragment fragment-index=2}
+:::
+::::
+
+:::::
+
+:::{.fragment fragment-index=3}
+But going beyond the defaults is often (much) more work that I want to do.
+:::
+
+## grid vs graphics (redux)
+
+### R has two low-level graphics systems
+
+![](img/rgraphics.png)
+
+## grid vs graphics (redux) {visibility="uncounted" auto-animate=true}
+
+### R has two low-level graphics systems
+
+![](img/rgraphics2.png)
+
+## grid vs graphics (redux) {visibility="uncounted" auto-animate=true}
+
+### R has two low-level graphics systems
+
+![](img/rgraphics2.png)
+
+**tinyplot** goals:
+
+1. Make base R graphics more user-friendly.
+2. Improved feature parity vs. grid-based 📦s like **ggplot2** and **lattice**.
+
+## Origin story 🤝
+
+### Collaboration
+
+A basic version of the core routine (then called "plot2.R") sat on my computer for a long time.
+
+I eventually packaged it up... and invited two key collaborators:
+
+::::: {.columns}
+
+:::: {.column width="45%"}
+::: {layout-ncol=2}
+
+![Vincent Arel-Bundock](https://codehorizons.com/wp-content/uploads/2023/07/Arel-Bundock_website.png){height=200}
+
+![Achim Zeileis](https://www.uibk.ac.at/media/filer_public_thumbnails/filer_public/2f/ab/2fabffd9-0389-4221-a340-195ddff82983/achim-zeileis.jpg__576x576_q85_crop_subsampling-2.jpg){height=200}
+
+:::
+::::
+:::: {.column width="55%"}
+[Vincent](https://arelbundock.com/) and [Achim](https://www.zeileis.org/) have helped push **tinyplot** _far_ beyond my original goals.
+:::
+:::::
+
+# tinyplot API
+
+## tinyplot API
+### Group(s) after the pipe `|`
+
+::: {.panel-tabset}
+
+### one group
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "2"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins
+)
+```
+
+### two groups
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "2"
+ 
+plt(
+  bill_dep ~ bill_len | sex + species,
+  data = penguins
+)
+```
+
+:::
+
+## tinyplot API
+### Groups map to colors; use the `"by"` keyword for other mappings
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  pch = "by"
+)
+```
+
+Also works for `lwd`, `lty`, etc.
+
+## tinyplot API
+### Legend can be moved, customized and turned off
+
+::: {.panel-tabset}
+
+### "left!"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  legend = "left!"
+)
+```
+
+### "bottom!"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  legend = list("bottom!", title = NULL)
+)
+```
+
+### "bottomright"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  legend = list("bottomright", bty = "o")
+)
+```
+
+### FALSE
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  legend = FALSE
+)
+```
+
+:::
+
+A `"!"` suffix places the legend _outside_ the plot area.
+
+## tinyplot API
+### facets
+
+::: {.panel-tabset}
+
+### one-sided
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  facet = ~island
+)
+```
+
+### one-sided (2)
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  facet = ~ sex + island
+)
+```
+
+### two-sided
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  facet = sex ~ island
+)
+```
+
+### outer-axes
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "1,6,7"
+
+tinytheme("clean2")
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  # frame = FALSE, ## non-theme option
+  facet = ~ sex + island
+)
+
+tinytheme('clean') # revert theme
+```
+
+### free
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4,5"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  facet = ~ sex + island,
+  facet.args = list(free = TRUE)
+)
+```
+
+:::
+
+## tinyplot API
+### types
+
+tinyplot types can be passed as either a _string_ or _function_:
+
+|     |     |     |     |     |
+|-----|:----|:----|:----|:----|
+| _string_ | `"p"` | `"density"` | `"lm"` | `"<name>"` |
+| _function_ | `type_points()` | `type_density()` | `type_lm()` | `type_<name>()` |
+
+\
+
+::: {.fragment}
+The function variants all take the form `type_<name>` and support type-specific
+argument passing for customization, e.g.
+
+```{r}
+# ?type_lm   # full documentation
+str(type_lm) # available args
+```
+
+P.S. Type args can also be passed via `plt(...)` _if_ there's no top-level clash.
+:::
+
+## tinyplot API
+### types
+
+::: {.panel-tabset}
+
+### "lm"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4,5"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins,
+  type = "lm", level = 0.8      # string
+  # type = type_lm(level = 0.8) # function
+)
+```
+
+### "density"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "4,5"
+
+plt(
+  ~ bill_len | species,
+  data = penguins,
+  type = "density"        # string
+  # type = type_density() # function
+)
+```
+
+:::
+
+## tinyplot API
+### Layers
+
+::: {.panel-tabset}
+
+### "p" + "lm"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "5"
+
+plt(
+  bill_dep ~ bill_len | species,
+  data = penguins
+)
+plt_add(type = "lm")
+```
+
+### "density" + "rug"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+#| code-line-numbers: "6"
+
+plt(
+  ~ bill_len | species,
+  data = penguins,
+  type = "density"
+)
+plt_add(type = "rug")
+```
+
+:::
+
+## tinyplot API
+### Themes
+
+Themes provide a convenient way to set a preferred aesthetic for your plots.
+
+- Dynamic reduction of whitespace, etc.
+- Remember: `tinytheme(...)` is persistent.
+
+Quick plotting function, which we'll re-use for showcasing some themes on the next slide:
+
+```{r}
+p = function() plt(
+    body_mass ~ flipper_len | bill_len, penguins,
+    facet = ~sex, yaxl = ",",
+    main = "Palmer penguins",
+    sub = "Brought to you by tinyplot!"
+)
+```
+
+## tinyplot API
+### Themes
+
+::: {.panel-tabset}
+
+### "default"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme()
+p()
+```
+
+### "tufte"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("tufte")
+p()
+```
+
+### "classic"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("classic")
+p()
+```
+
+### "clean"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("clean")
+p()
+```
+
+### "clean2"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("clean2")
+p()
+```
+
+### "minimal"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("minimal")
+p()
+```
+
+### "ipsum"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("ipsum")
+p()
+```
+
+### "dark"
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme("dark")
+p()
+```
+
+### custom
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 0.8
+
+tinytheme(
+  "ipsum",
+  pch = 19,
+  cex = 1.2, cex.main = 2,
+  cex.sub = 1.5, cex.lab = 1.5,
+  palette.sequential = "zissou",
+  family ="HersheyScript"
+)
+p()
+```
+
+:::
+
+## Other features
+### Many other bells and whistles
+
+- Easily export plots with the `file` argument.
+- Easy alpha transparency with the `alpha` and `fill` arguments.
+- Transform axis labels (`x/yaxl`) and breaks (`x/yaxb`).
+- Custom types.
+- etc.
+
+# Quickfire gallery
+
+## Quickfire gallery
+### histogram
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+tinytheme("clean")
+pal = c("darkorange","purple","cyan4")
+
+plt(
+  ~flipper_len | species,
+  data = penguins, 
+  type = "hist",
+  breaks = 30,
+  palette = pal
+)
+```
+
+## Quickfire gallery
+### box plots
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+plt(
+  body_mass ~ species | sex,
+  data = penguins,
+  type = "boxplot", 
+  yaxl = ",",
+  flip = TRUE
+)
+```
+
+## Quickfire gallery
+### violin plots
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+plt(
+  body_mass ~ species | sex,
+  data = penguins,
+  type = "violin", 
+  yaxl = ",",
+  flip = TRUE,
+  fill = 0.5
+)
+```
+
+## Quickfire gallery
+### error bars
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+mod = lm(weight ~ 0 + Time + Diet,
+         data = ChickWeight)
+coefs = data.frame(
+  names(coef(mod)),
+  coef(mod),
+  confint(mod)
+) |> setNames(c("term", "estimate",
+                "lwr", "upr"))
+
+plt(
+  estimate ~ term,
+  ymin = lwr, ymax = upr,
+  data = coefs,
+  type = "errorbar"
+)
+```
+
+## Quickfire gallery
+### rectangles
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+i = 4*(0:10)
+
+plt(
+  xmin = 100+i, xmax = 150+i,
+  ymin = 300+i, ymax = 380+i,
+  by = i, fill = 0.2,
+  type = "rect"
+)
+```
+
+## Quickfire gallery
+### spineplot
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+ttnc = as.data.frame(Titanic)
+wts = ttnc$Freq
+
+plt(
+  Survived ~ Sex | Class, facet = "by",
+  data = ttnc,
+  type = type_spineplot(weights = wts)
+)
+```
+
+## Quickfire gallery
+### ridge plot
+
+```{r}
+#| output-location: column
+#| fig-width: 6
+#| fig-asp: 1
+
+tinytheme("ridge2")
+
+aq = transform(
+  airquality,
+  Month = factor(
+    month.abb[Month],
+    levels = month.abb[5:9]
+  )
+)
+  
+plt(Month ~ Temp | Temp,
+  data = aq,
+  type = type_ridge(col = "white")
+)
+```
+
+```{r}
+#| include: false
+tinytheme()
+```
+
+# Conclusions
+
+## Advantages of tinyplot {#sec-adv}
+
+### The sales pitch summary
+
+- Concise
+- Consistent
+- Ergonomic
+- Extensive
+- Lightweight
+
+For the longer version: [[tinyplot pros]{.button}](#sec-pros)
+
+## Disadvantages of tinyplot {#sec-disadv}
+
+### What are the caveats?
+
+- Layering gotchas
+- Custom layout
+- Missing features
+
+For the longer version: [[tinyplot cons]{.button}](#sec-cons)
+
+## Acknowledgements
+
+### tinyplot would not be where it is today without...
+
+The R Core team:
+
+- Especially [Paul Murrell](https://www.stat.auckland.ac.nz/~paul/), who has almost single-handedly built and maintained R's graphics foundations for everyone else.
+
+My wonderful **tinyplot** co-maintainers:
+
+- Vincent Arel-Bundock and Achim Zeileis
+
+Many other contributors, feedback providers, and a sources of inspiration.
+
+- Etienne Bacher, etc.
+- the ggplot2 team (Hadley, Thomas, Teun, etc.)
+
+## tinyplot
+
+### Learn more
+
+:::: {.columns}
+
+::: {.column width="20%"}
+
+![](img/logo.svg)
+
+:::
+::: {.column width="80%"}
+
+{{< iconify mdi:link-variant >}} [grantmcdermott.com/tinyplot](https://grantmcdermott.com/tinyplot){preview-link="true"}
+
+{{< iconify mdi:github >}} [grantmcdermott/tinyplot](https://github.comgrantmcdermott/tinyplot){preview-link="true"}
+
+
+:::
+
+::::
+
+## References
+
+::: {#refs}
+:::
+
+# Bonus: Tinyplot pros {#sec-pros visibility="uncounted"}
+
+## Concise {visibility="uncounted"}
+
+### The formula API gives bang for buck
+
+![](img/briggs.png)
+
+_P.S. Thanks to Ryan for letting me use this screenshot._
+
+## Concise {visibility="uncounted"}
+
+### The formula API gives bang for buck
+
+Just focusing on the core plot components...
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
+```r
+ggplot(
+  simres,
+  aes(
+    x = true_effect, y = mean_loo_err,
+    color = factor(asym)
+    )
+  ) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ exclude_ns)
+```
+
+:::
+
+::: {.column width="50%"}
+
+```r
+plt(
+  mean_loo_err ~ true_effect | factor(asym),
+  data = simres,
+  type = "o",
+  facet = ~ exlude_ns
+)
+```
+
+:::
+
+::::
+
+_(That's about 1/3 fewer characters.)_
+
+## Concise {visibility="uncounted"}
+
+### Concision is even starker vs. vanilla base plot
+
+:::: {.columns}
+
+::: {.column width="48%"}
+
+![](img/wolfgang1.png)
+
+:::
+
+::: {.column width="4%"}
+vs
+:::
+
+::: {.column width="48%"}
+
+![](img/wolfgang2.png)
+
+Adapted from @viechtbauer2025tinyplot.
+
+:::
+
+::::
+
+## Lightweight {visibility="uncounted"}
+
+### Base R only
+
+**tinyplot** has _zero_ third-party dependencies.
+
+- Compares favourably against **lattice** (0 deps), **ggplot2** (24 deps), **tidyplots** (111 deps), etc.
+
+We've also kept the size of the install tarball down to a minimum (<1 MB).
+
+- All "data heavy" artifacts are reserved for the [**tinyplot** website](https://grantmcdermott.com/tinyplot/) (including a comprehensive test suite and set of vignettes).
+
+Very fast to install and play with in webR / WebAssembly. ([Try it!](https://webr.r-wasm.org/latest/))
+
+- Great for teaching or quick demos with colleagues.
+
+[[Back to main]{.button}](#sec-adv)
+
+
+# Bonus: Tinyplot cons {#sec-cons visibility="uncounted"}
+
+## Layering gotchas {visibility="uncounted"}
+
+### Scaling is fixed by the first layer
+
+```{r}
+plt(body_mass ~ bill_len | species, penguins)
+plt_add(type = "lm")
+```
+
+::: {.fragment}
+This is a limitation of **graphics** "canvas" logic. (Workarounds: Change layer order, or use `x/ylim`.)
+::: 
+
+## Layering gotchas {visibility="uncounted"}
+
+### Can't combine `file` with `plt_add` (yet)
+
+This doesn't work:
+
+```r
+plt(..., file = "myplot.png")
+plt_add(type = ...)
+```
+
+::: {.fragment}
+I'm hoping to provide a native solution in the future, but workarounds for now:
+
+- Use `plt(..., file = "myplot.png", draw = ...)`
+- Open/close the appropriate graphics device manually, e.g. `png("myplot.png"); plt(...); plt_add(...); dev.off() `
+::: 
+
+## Missing features {visibility="uncounted"}
+
+I hope that I have convinced you that **tinyplot** covers a _lot_ of ground.
+
+- The API should also be very stable. I expect few (if any) breaking changes from here on out.
+
+Still, **tinyplot**  is a relatively young project and there are some features and plot types that we don't support (yet). Some things coming down the pike:
+
+- bubble plots ([#433](https://github.com/grantmcdermott/tinyplot/pull/433))
+- dodged elements ([#406](https://github.com/grantmcdermott/tinyplot/issues/406))
+- maps ([#210](https://github.com/grantmcdermott/tinyplot/issues/210))
+
+[[Back to main]{.button}](#sec-disadv)

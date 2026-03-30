@@ -8,13 +8,13 @@
 #' `tinyplot_add()`.
 #'
 #' @section Limitations:
-#' - Currently, `tinyplot_add` only works reliably if you are adding to a plot
-#' that was originally constructed with the [tinyplot.formula] method (and
-#' passed an appropriate `data` argument). In contrast, we cannot guarantee that
-#' using `tinyplot_add` will work correctly if your original plot was
-#' constructed with the atomic [tinyplot.default] method. The reason has to do
-#' with potential environment mismatches. (An exception is thus if your plot
-#' arguments (`x`, `y`, etc.) are attached to your global R environment.)
+#' - `tinyplot_add()` works reliably only when adding to a plot originally
+#'   created using the [`tinyplot.formula`] method with a valid `data` argument.
+#'   We cannot guarantee correct behavior if the original plot was created with
+#'   the atomic [`tinyplot.default`] method, due to potential environment
+#'   mismatches. (An exception is when the original plot arguments---`x`, `y`,
+#'   etc.---are located in the global environment.)
+#'
 #' - Automatic legends for the added elements will be turned off.
 #'
 #' @param ... All named arguments override arguments from the previous calls.
@@ -22,8 +22,6 @@
 #' call.
 #'
 #' @examples
-#' library(tinyplot)
-#'
 #' tinyplot(Sepal.Width ~ Sepal.Length | Species,
 #'   facet = ~Species,
 #'   data = iris)
@@ -43,10 +41,7 @@
 #'
 #' @export
 tinyplot_add = function(...) {
-  cal = getOption("tinyplot_last_call", default = NULL)
-
-  ## TODO: remove the global option above and move to this when density is refactored
-  # cal = get(".last_call", envir = get(".tinyplot_env", envir = parent.env(environment())))
+  cal = get_environment_variable(".last_call")
 
   if (is.null(cal)) {
     stop("No previous tinyplot call found.")
@@ -65,7 +60,7 @@ tinyplot_add = function(...) {
   }
 
   cal[["add"]] = TRUE
-  eval(cal)
+  eval(cal, envir = parent.frame())
 }
 
 

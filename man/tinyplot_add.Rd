@@ -27,20 +27,17 @@ layer on top of the existing plot. \code{plt_add()} is a shorthand alias for
 \section{Limitations}{
 
 \itemize{
-\item Currently, \code{tinyplot_add} only works reliably if you are adding to a plot
-that was originally constructed with the \link{tinyplot.formula} method (and
-passed an appropriate \code{data} argument). In contrast, we cannot guarantee that
-using \code{tinyplot_add} will work correctly if your original plot was
-constructed with the atomic \link{tinyplot.default} method. The reason has to do
-with potential environment mismatches. (An exception is thus if your plot
-arguments (\code{x}, \code{y}, etc.) are attached to your global R environment.)
+\item \code{tinyplot_add()} works reliably only when adding to a plot originally
+created using the \code{\link{tinyplot.formula}} method with a valid \code{data} argument.
+We cannot guarantee correct behavior if the original plot was created with
+the atomic \code{\link{tinyplot.default}} method, due to potential environment
+mismatches. (An exception is when the original plot arguments---\code{x}, \code{y},
+etc.---are located in the global environment.)
 \item Automatic legends for the added elements will be turned off.
 }
 }
 
 \examples{
-library(tinyplot)
-
 tinyplot(Sepal.Width ~ Sepal.Length | Species,
   facet = ~Species,
   data = iris)

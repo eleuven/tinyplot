@@ -7,13 +7,35 @@
 \usage{
 type_area(alpha = NULL)
 
-type_ribbon(alpha = NULL)
+type_ribbon(alpha = NULL, dodge = 0, fixed.dodge = FALSE)
 }
 \arguments{
 \item{alpha}{numeric value between 0 and 1 specifying the opacity of ribbon shading
 If no \code{alpha} value is provided, then will default to \code{tpar("ribbon.alpha")}
 (i.e., probably \code{0.2} unless this has been overridden by the user in their global
 settings.)}
+
+\item{dodge}{Adjustment parameter for dodging overlapping points or ranges in
+grouped plots along the x-axis (or y-axis for flipped plots). Either:
+\itemize{
+\item numeric value in the range \verb{[0,1)}. Note that values are scaled
+relative to the spacing of x-axis breaks, e.g. \code{dodge = 0.1} places the
+outermost groups one-tenth of the way to adjacent breaks, \code{dodge = 0.5}
+places them midway between breaks, etc. Values < 0.5 are recommended.
+\item logical. If \code{TRUE}, the dodge width is calculated automatically based on
+the number of groups (0.1 per group for 2-4 groups, 0.45 for 5+ groups). If
+\code{FALSE} or 0, no dodging is performed.
+}
+
+Default value is 0 (no dodging). While we do not check, it is \emph{strongly}
+recommended that dodging only be used in cases where the x-axis comprises a
+limited number of discrete breaks.}
+
+\item{fixed.dodge}{Logical. If \code{FALSE} (default), dodge positions are
+calculated independently for each \code{x} value, based only on the groups
+present at that position. If \code{TRUE}, dodge positions are based on all
+groups, ensuring "fixed" spacing across x-axis breaks (i.e., even if some
+groups are missing for a particular \code{x} value).}
 }
 \description{
 Type constructor functions for producing polygon ribbons, which
@@ -21,15 +43,25 @@ define a \code{y} interval (usually spanning from \code{ymin} to \code{ymax}) fo
 \code{x} value. Area plots are a special case of ribbon plot where \code{ymin} is
 set to 0 and \code{ymax} is set to \code{y}.
 }
+\section{Dodging ribbon plots}{
+
+
+We support dodging for grouped ribbon plots, enabling similar functionality
+to dodged errorbar and pointrange plots. However, it is strongly recommended
+that dodging is only implemented for cases where the x-axis comprises a
+limited number of discrete cases (e.g., coefficient or event-study plots).
+See Examples.
+}
+
 \examples{
-x = 1:100/10
+x = 1:100 / 10
 y = sin(x)
 
 #
 ## Ribbon plots
 
 # "ribbon" convenience string
-tinyplot(x = x, ymin = y-1, ymax = y+1, type = "ribbon")
+tinyplot(x = x, ymin = y - 1, ymax = y + 1, type = "ribbon")
 # Same result with type_ribbon()
 tinyplot(x = x, ymin = y-1, ymax = y+1, type = type_ribbon())
 
@@ -38,7 +70,7 @@ tinyplot(x = x, y = y, ymin = y-1, ymax = y+1, type = "ribbon")
 
 #
 ## Area plots
-  
+
 # "area" type convenience string
 tinyplot(x, y, type = "area")
 
@@ -47,4 +79,35 @@ tinyplot(x, y, type = type_area())
 
 # Area plots are often used for time series charts
 tinyplot(AirPassengers, type = "area")
+
+#
+## Dodged ribbon/area plots
+
+# Dodged ribbon or area plots can be useful in cases where there is strong
+# overlap across groups (and a limited number of discrete x-axis values).
+
+dat = data.frame(
+  x = rep(c("Before", "After"), each = 2),
+  grp = rep(c("A", "B"), 2),
+  y = c(10, 10.5, 15, 15.3),
+  lwr = c(8, 8.5, 13, 13.3),
+  upr = c(12, 12.5, 17, 17.3)
+)
+
+tinyplot(
+  y ~ x | grp,
+  data = dat,
+  ymin = lwr, ymax = upr,
+  type = type_ribbon(),
+  main = "Overlappling ribbons"
+)
+
+tinyplot(
+  y ~ x | grp,
+  data = dat,
+  ymin = lwr, ymax = upr,
+  type = type_ribbon(dodge = 0.1),
+  main = "Dodged ribbons"
+)
+
 }

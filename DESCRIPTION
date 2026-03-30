@@ -1,15 +1,15 @@
 Package: tinyplot
 Type: Package
 Title: Lightweight Extension of the Base R Graphics System
-Version: 0.3.0.99
-Date: 2025-02-05
+Version: 0.6.1
+Date: 2026-03-28
 Authors@R: 
   c(
     person(
       given = "Grant",
       family = "McDermott",
       role = c("aut", "cre"),
-      email = "gmcd@amazon.com",
+      email = "contact@grantmcdermott.com",
       comment = c(ORCID = "0000-0001-7883-8573")
     ),
     person(
@@ -36,9 +36,8 @@ Authors@R:
 Description: Lightweight extension of the base R graphics system, with support
       for automatic legends, facets, themes, and various other enhancements.
 License: Apache License (>= 2)
-Remotes: etiennebacher/altdoc
 Depends:
-  R (>= 4.0)
+  R (>= 4.0.0)
 Imports: 
   graphics,
   grDevices,
@@ -46,16 +45,16 @@ Imports:
   tools,
   utils
 Suggests:
-  altdoc (>= 0.5.0.9000),
   fontquiver,
   png,
   rsvg,
-  svglite,
+  svglite (>= 2.2.0),
   tinytest,
   tinysnapshot (>= 0.0.3),
   knitr
+Config/Needs/website: altdoc (>= 0.7.2), future.apply
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 URL: https://grantmcdermott.com/tinyplot/
 BugReports: https://github.com/grantmcdermott/tinyplot/issues
 Roxygen: list(markdown = TRUE)

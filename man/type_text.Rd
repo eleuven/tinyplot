@@ -5,16 +5,22 @@
 \title{Text annotations plot type}
 \usage{
 type_text(
-  labels,
+  labels = NULL,
   adj = NULL,
   pos = NULL,
   offset = 0.5,
+  family = NULL,
+  font = NULL,
   vfont = NULL,
-  font = NULL
+  xpd = NULL,
+  srt = 0,
+  clim = c(0.5, 2.5)
 )
 }
 \arguments{
-\item{labels}{Character vector of length 1 or of the same length as the number of x,y coordinates.}
+\item{labels}{Character vector of length \code{1} or the same length as the
+number of \code{x},\code{y} coordinates. If left as \code{NULL}, then the labels will
+automatically inherit the corresponding \code{y} values. See Examples.}
 
 \item{adj}{one or two values in \eqn{[0, 1]} which specify the x
     (and optionally y) adjustment (\sQuote{justification}) of the
@@ -32,25 +38,65 @@ type_text(
     distance (\sQuote{offset}) of the text label from the specified
     coordinate in fractions of a character width.}
 
+\item{family}{The name of a font family. Default of \code{NULL} means that the
+family will be the same as the main plot text, following
+\code{\link[graphics]{par}}. Note that if a \code{family} argument is provided,
+then \code{vfont} (below) will automatically be ignored.}
+
+\item{font}{Integer giving the font face to be used,
+following \code{\link[graphics]{par}}. On most devices, the mapping is: \code{1} =
+regular, \code{2} = bold, \code{3} = italic, \code{4} = bold italic, and \code{5} = symbol.}
+
 \item{vfont}{\code{NULL} for the current font family, or a character
     vector of length 2 for \code{\link[grDevices]{Hershey}} vector
     fonts.  The first element of
     the vector selects a typeface and the second element selects a
     style.  Ignored if \code{labels} is an expression.}
 
-\item{font}{Font to be used, following \code{\link[graphics:par]{graphics::par()}}}
+\item{xpd}{Logical value or \code{NA} denoting text clipping behaviour, following
+\code{\link[graphics]{par}}.}
+
+\item{srt}{Numeric giving the desired string rotation in degrees.}
+
+\item{clim}{Numeric giving the lower and upper limits of the character
+expansion (\code{cex}) normalization for bubble charts.}
 }
 \description{
-Type function for adding text annotations to a plot. This function allows
-you to draw text at specified (x,y) coordinates.
+Type function for adding text annotations to a plot at the
+specified (\code{x},\code{y}) coordinates.
 }
 \examples{
+# simplest case (no labels), will auto revert to y labels
+tinyplot(1:12, type = "text")
 
+# pass explicit `labels` arg if you want specific text
+tinyplot(1:12, type = "text", labels = month.abb)
+
+# for advanced customization, it's safer to pass args through `type_text()`
+tinyplot(1:12, type = type_text(
+  labels = month.abb, family = "HersheyScript", srt = -20))
+
+# same principles apply to grouped and/or facet data
 tinyplot(mpg ~ hp | factor(cyl),
   data = mtcars,
   type = type_text(
     labels = row.names(mtcars),
+    family = "HersheySans",
     font = 2,
-    adj = 0))
+    adj = 0
+  )
+)
+
+# tip: use `xpd = NA` to avoid clipping text at the plot region
+tinyplot(mpg ~ hp | factor(cyl),
+  data = mtcars,
+  type = type_text(
+    labels = row.names(mtcars),
+    family = "HersheySans",
+    font = 2,
+    adj = 0,
+    xpd = NA
+  )
+)
 
 }

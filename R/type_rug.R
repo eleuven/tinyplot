@@ -33,16 +33,18 @@
 #' @importFrom graphics rug
 #' @export
 type_rug = function(ticksize = 0.03, side = 1, quiet = getOption("warn") < 0, jitter = FALSE, amount = NULL) {
-  data_rug = function(datapoints, ...) {
+  data_rug = function(settings, ...) {
+    env2env(settings, environment(), "datapoints")
     if (nrow(datapoints) == 0) {
       msg = "`type_rug() only works on existing plots with x and y data points."
       stop(msg, call. = FALSE)
     }
-    return(datapoints)
+
+    env2env(environment(), settings, "datapoints")
   }
   draw_rug = function(.ticksize = ticksize, .side = side, .quiet = quiet, .jitter = jitter, .amount = amount) {
       fun = function(ix, iy, icol, ilwd, ...) {
-        lc = getOption("tinyplot_last_call", default = NULL)
+        lc = get_environment_variable(".last_call")
         swapy = !is.null(lc$type) && lc$type %in% c("density", "hist", "histogram")
         rugx = if (swapy) iy else if (side %in% c(1, 3)) ix else iy
         if (isTRUE(jitter)) rugx = jitter(rugx, amount = .amount)

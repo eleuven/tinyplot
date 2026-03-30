@@ -1,13 +1,15 @@
 ---
 title: "Plot types"
+format:
+  html:
+    css: custom.css
+tbl-colwidths: [20,20,50,10]
 ---
 
-**tinyplot** is a lightweight extension of R's base plotting system, designed to
-simplify and enhance data visualization. One of its key features is the `type`
-argument, which allows you to specify different types of plots easily. This
-tutorial will guide you through the various plot types available in
-**tinyplot**, demonstrating how to use the `type` argument to create a wide
-range of visualizations.
+A key feature of **tinyplot** is the `type` argument, which allows you to
+specify different kinds of plots. This tutorial will guide you through the
+various plot types available in **tinyplot**, demonstrating how the `type`
+argument can be used to to create a wide range of visualizations.
 
 We will consider three categories of plot types:
 
@@ -54,43 +56,56 @@ advanced visualizations. Each of these additional types are available either as
 a convenience string (with default behaviour) or a companion `type_*()` function
 (with options for customized behaviour).
 
-Shapes:
+#### Shapes
 
-- `"area"` / `type_area()`: Plots the area under the curve from `y` = 0 to `y` = f(`x`).
-- `"errorbar"` / `type_errorbar()`: Adds error bars to points; requires `ymin` and `ymax`.
-- `"pointrange"` / `type_pointrange()`: Combines points with error bars.
-- `"polygon"` / `type_polygon()`: Draws polygons.
-- `"polypath"` / `type_polypath()`: Draws a path whose vertices are given in `x` and `y`.
-- `"rect"` / `type_rect()`: Draws rectangles; requires `xmin`, `xmax`, `ymin`, and `ymax`.
-- `"ribbon"` / `type_ribbon()`: Creates a filled area between `ymin` and `ymax`.
-- `"segments"` / `type_segments()`: Draws line segments between pairs of points.
-- `"text"` / `type_text()`: Add text annotations to a plot.
+| string                | function            | description                                                    | docs |
+|-----------------------|---------------------|----------------------------------------------------------------|------|
+| `"area"`              | `type_area()`       | Plots the area under the curve from `y` = 0 to `y` = f(`x`).   | [link](/man/type_ribbon.qmd) |
+| `"errorbar"`          | `type_errorbar()`   | Adds error bars to points; requires `ymin` and `ymax`.         | [link](/man/type_errorbar.qmd) |
+| `"l"` / `"b"` / etc.  | `type_lines()`      | Draws lines and line-alike (same as base `"l"`, `"b"`, etc.)   | [link](/man/type_lines.qmd) |
+| `"pointrange"`        | `type_pointrange()` | Combines points with error bars.                               | [link](/man/type_errorbar.qmd) |
+| `"p"`                 | `type_points()`     | Draws points (same as base `"p"`).                             | [link](/man/type_points.qmd) |
+| `"polygon"`           | `type_polygon()`    | Draws polygons.                                                | [link](/man/type_polygon.qmd) |
+| `"polypath"`          | `type_polypath()`   | Draws a path whose vertices are given in `x` and `y`.          | [link](/man/type_polypath.qmd) |
+| `"rect"`              | `type_rect()`       | Draws rectangles; requires `xmin`, `xmax`, `ymin`, and `ymax`. | [link](/man/type_rect.qmd) |
+| `"ribbon"`            | `type_ribbon()`     | Creates a filled area between `ymin` and `ymax`.               | [link](/man/type_ribbon.qmd) |
+| `"segments"`          | `type_segments()`   | Draws line segments between pairs of points.                   | [link](/man/type_segments.qmd) |
+| `"text"`              | `type_text()`       | Adds text annotations to a plot.                               | [link](/man/type_text.qmd) |
 
-Visualizations:
+#### Visualizations
 
-- `"boxplot"` / `type_boxplot()`: Creates a box-and-whisker plot.
-- `"density"` / `type_density()`: Plots the density estimate of a variable.
-- `"histogram"` / `type_histogram()`: Creates a histogram of a single variable.
-- `"jitter"` / `type_jitter()`: Jittered points.
-- `"qq"` / `type_qq()`: Creates a quantile-quantile plot.
-- `"ridge"` / `type_ridge()`: Creates a ridgeline (aka joy) plot.
-- `"rug"` / `type_rug()`: Adds a rug to an existing plot.
-- `"spineplot"` / `type_spineplot()`: Creates a spineplot or spinogram.
+| string                     | function            | description                                    | docs |
+|----------------------------|---------------------|------------------------------------------------|------|
+| `"barplot"` / `"bar"`      | `type_barplot()`    | Creates a bar plot.                            | [link](/man/type_barplot.qmd) |
+| `"boxplot"` / `"box"`      | `type_boxplot()`    | Creates a box-and-whisker plot.                | [link](/man/type_boxplot.qmd) |
+| `"density"`                | `type_density()`    | Plots the density estimate of a variable.      | [link](/man/type_density.qmd) |
+| `"histogram"` / `"hist"`   | `type_histogram()`  | Creates a histogram of a single variable.      | [link](/man/type_histogram.qmd) |
+| `"jitter"` / `"j"`         | `type_jitter()`     | Jittered points.                               | [link](/man/type_jitter.qmd) |
+| `"qq"`                     | `type_qq()`         | Creates a quantile-quantile plot.              | [link](/man/type_qq.qmd) |
+| `"ridge"`                  | `type_ridge()`      | Creates a ridgeline (aka joy) plot.            | [link](/man/type_ridge.qmd) |
+| `"rug"`                    | `type_rug()`        | Adds a rug to an existing plot.                | [link](/man/type_rug.qmd) |
+| `"spineplot"` / `"spine"`  | `type_spineplot()`  | Creates a spine plot or spinogram.             | [link](/man/type_spineplot.qmd) |
+| `"violin"`                 | `type_violin()`     | Creates a violin plot.                         | [link](/man/type_violin.qmd) |
+  
+#### Models
 
-Models:
+| string                | function           | description                              | docs |
+|-----------------------|--------------------|------------------------------------------|------|
+| `"loess"`             | `type_loess()`     | Local regression curve.                  | [link](/man/type_loess.qmd) |
+| `"lm"`                | `type_lm()`        | Linear regression line.                  | [link](/man/type_lm.qmd) |
+| `"glm"`               | `type_glm()`       | Generalized linear model fit.            | [link](/man/type_glm.qmd) |
+| `"spline"`            | `type_spline()`    | Cubic (or Hermite) spline interpolation. | [link](/man/type_spline.qmd) |
 
-- `"loess"` / `type_loess()`: Local regression curve.
-- `"lm"` / `type_lm()`: Linear regression line.
-- `"glm"` / `type_glm()`: Generalized linear model fit.
-- `"spline"` / `type_spline()`: Cubic (or Hermite) spline interpolation.
+#### Functions
 
-Functions:
+| string                | function           | description                              | docs |
+|-----------------------|--------------------|-----------------------------------------|------|
+| `"abline"`            | `type_abline()`    | Line(s) with intercept and slope.       | [link](/man/type_abline.qmd) |
+| `"hline"`             | `type_hline()`     | Horizontal line(s).                     | [link](/man/type_abline.qmd) |
+| `"vline"`             | `type_vline()`     | Vertical line(s).                       | [link](/man/type_abline.qmd) |
+| `"function"`          | `type_function()`  | Arbitrary function.                     | [link](/man/type_function.qmd) |
+| `"summary"`           | `type_summary()`   | Summarizes `y` by unique values of `x`. | [link](/man/type_summary.qmd) |
 
-- `type_abline()`: line(s) with intercept and slope.
-- `type_hline()`: horizontal line(s).
-- `type_vline()`: vertical line(s).
-- `type_function()`: arbitrary function.
-- `type_summary()`: summarize `y` by unique values of `x`.
 
 To see the difference between the convenience strings and their respective
 `type_*()` functional equivalents, let's quickly walk through two examples.
@@ -151,51 +166,35 @@ tinyplot(Temp ~ Wind | Month, data = aq, facet = "by", type = "lm")
 
 It is easy to add custom types to **tinyplot**. Users who need highly customized
 plots, or developers who want to add support to their package or functions, only
-need to define three simple functions: `data_typename()`, `draw_typename()`, and
-`type_typename()`.
+need to define their own `type_<type>()` function. Let's start with a simple
+example to see how this works in practice.
 
-In this section, we explain the role of each of these functions and present a
-minimalist example of a custom type. Interested readers may refer to
-[the **tinyplot** source code](https://github.com/grantmcdermott/tinyplot)
-to see many more examples, since each **tinyplot** type is itself implemented as a
-custom type.
+### A minimal example
 
-The three functions that we need to define for a new type are:
-
-1. `data_*()`: Function factory.
-    - Accepts a list of internal objects
-        - Inputs must include `...`
-        - `datapoints` Is the most important object. It is a data frame with the datapoints to plot. 
-        - Other objects that can be modified by `data_*()` include: `by`, `facet`, `ylab`, `palette`
-    - Returns a named list with modified versions of those objects.
-2. `draw_*()`: Function factory.
-    - Accepts information about data point values and aesthetics. 
-        - Inputs must include `...`
-        - The `i` prefix in argument names indicates that we are operating on a subgroup of the data, identified by `facet` or using the `|` operator in a formula.
-        - Available arguments are: `ibg`, `icol`, `ilty`, `ilwd`, `ipch`, `ix`, `ixmax`, `ixmin`, `iy`, `iymax`, `iymin`, `cex`, `dots`, `type`, `x_by`, `i`, `facet_by`, `by_data`, `facet_data`, `flip`
-    - Returns a function which can call base R to draw the plot.
-3. `type_*()`: A wrapper function that returns a named list with three elements:
-    - `draw`
-    - `data`
-    - `name`
-
-Here is a minimalist example of a custom type that logs both `x` and `y` and
-plots lines.
+Here is a minimal example of a custom `type_log()` that logs both `x` and `y`
+before plotting points.
 
 ```{r}
-#| layout-ncol: 2
 type_log = function(base = exp(1)) {
 
+  # data tranformation function
   data_log = function() {
-    fun = function(datapoints, ...) {
+    fun = function(settings, ...) {
+      # extract raw datapoints from settings environment
+      datapoints = settings$datapoints
+
+      # transform (log) the data
       datapoints$x = log(datapoints$x, base = base)
       datapoints$y = log(datapoints$y, base = base)
       datapoints = datapoints[order(datapoints$x), ]
-      return(list(datapoints = datapoints, ...))
+
+      # re-assign modified datapoints back to settings
+      settings$datapoints = datapoints
     }
     return(fun)
   }
 
+  # drawing function
   draw_log = function() {
     fun = function(ix, iy, icol, ...) {
       points(
@@ -207,27 +206,179 @@ type_log = function(base = exp(1)) {
     return(fun)
   }
 
+  # return object (list)
   out = list(
-    draw = draw_log(),
     data = data_log(),
+    draw = draw_log(),
+    name = "p" # fallback behaviour same as "p" type (e.g., legend defaults)
+  )
+  class(out) = "tinyplot_type"
+  return(out)
+
+}
+```
+
+To use, simply pass to `type = type_log(<args>)` as per as normal.
+
+```{r}
+#| layout-ncol: 2
+tinyplot(mpg ~ wt | factor(am), data = mtcars,
+  type = type_log(), main = "Ln (natural logarithm)")
+
+tinyplot(mpg ~ wt | factor(am), data = mtcars,
+  type = type_log(base = 10), main = "Log (base 10)")
+```
+
+### How it works
+
+As illustrated by our minimal example, custom **tinyplot** types require three
+key functions:
+
+1. **`type_<type>()`**: The main wrapper function that users will call. It
+   should accept any type-specific arguments that users will need to adjust the
+   final plot (e.g., here: `base`). More importantly, it _must_ return a list
+   of class `"tinyplot_type"` and contain three elements:
+    - `data`: A data transformation function (see below)
+    - `draw`: A drawing function (see below)
+    - `name`: The name of the underlying plot type (this can be anything, but
+      think of it as a convenient way to inherit default/fallback behaviour from
+      an existing plot type)
+
+2. **`data_<type>()`**: A function factory that returns a data transformation
+   function:
+    - **Required arguments**: `settings` and `...`
+    - `settings` is an environment containing plot data and parameters,
+       including `datapoints` (a data frame with `x`, `y`, `by`, etc.),
+       `legend_args` (a list of legend customizations), and many other internal
+       parameters (see [Appendix: Available settings](#appendix-available-settings)
+       below for a complete list).
+    - Should modify `settings` in-place (e.g., `settings$datapoints = ...`)
+    - Does not need to return anything
+
+3. **`draw_<type>()`**: A function factory that returns a drawing function:
+    - **Required arguments**: `...`
+    - **Available arguments**: `ix`, `iy`, `ixmin`, `ixmax`, `iymin`, `iymax`,
+      `icol`, `ibg`, `ipch`, `ilty`, `ilwd`, `icex`, and others
+    - The `i` prefix indicates data for a single group (when using `|` grouping
+      or facets)
+    - Should call base R graphics functions (e.g., `points()`, `lines()`,
+      `polygon()`) to render the plot
+
+The key insight is that `data_*()` transforms the data once, while `draw_*()`
+is called repeatedly for each group or facet.
+
+### Pro tip: Re-use existing plot types
+
+Rather than code up all of the internals for a custom type from scratch, users
+are strongly encouraged to re-use the scaffolding for existing types. One of the
+easiest ways to do this---which we use repeatedly in the main **tinyplot**
+codebase---is by "delegating" to an existing type at the end of the
+`data_<type>` function. Again, this is perhaps easier seen than explained, so
+consider an alternate version of our previous `type_log()` function.
+
+```{r}
+type_log_redux = function(base = exp(1)) {
+
+  # data tranformation function
+  data_log = function() {
+    fun = function(settings, ...) {
+      datapoints = settings$datapoints
+
+      datapoints$x = log(datapoints$x, base = base)
+      datapoints$y = log(datapoints$y, base = base)
+      datapoints = datapoints[order(datapoints$x), ]
+
+      settings$datapoints = datapoints
+
+      # re-assign/delegate to "p" type
+      settings$type = "p"
+    }
+    return(fun)
+  }
+
+  # return object (list)
+  out = list(
+    data = data_log(),
+    draw = NULL, # NULL => fall back to default type (now "p") drawing function
     name = "log"
+  )
+  class(out) = "tinyplot_type"
+  return(out)
+
+}
+```
+
+The key differences from our original `type_log` function are:
+
+- `settings$type = "p"` (re-assign the type at the end of `data_log()`)
+- `draw = NULL` (drop the dedicated `draw_log()` function entirely; will fall back to `draw_points()` internally now)
+
+This "redux" version is obviously shorter than our original version, since we
+can skip the custom `draw_log()` section. But re-using existing **tinyplot**
+scaffolding brings added benefits beyond code concision. In particular, it
+guarantees that all of the functionality from an existing `type` will be made
+available to your custom type. For example, in our first `type_log()` function
+we didn't account for the fact that users might want to adjust groups by other
+aesthetics (e.g, `pch`), whereas we get this for free in `type_log_redux()`.
+
+```{r}
+#| layout-ncol: 2
+tinyplot(mpg ~ wt | factor(am), data = mtcars,
+  pch = "by",
+  type = type_log(), main = "type_log")
+
+tinyplot(mpg ~ wt | factor(am), data = mtcars,
+  pch = "by",
+  type = type_log_redux(), main = "type_log_redux")
+```
+
+Moral of the story: be lazy and re-use existing **tinyplot** scaffolding
+wherever possible; especially drawing functions.
+
+### More examples
+
+The **tinyplot**
+[source code](https://github.com/grantmcdermott/tinyplot/tree/main/R)
+contains many examples of type constructor functions that should provide a
+helpful starting point for custom plot types. Each built-in **tinyplot** type
+is itself implemented as a custom type, so you can see real-world examples of
+varying complexity. For example, take a look at the
+[`type_points.R`](https://github.com/grantmcdermott/tinyplot/blob/main/R/type_points.R) or
+[`type_area.R`](https://github.com/grantmcdermott/tinyplot/blob/main/R/type_area.R)
+code. (The latter provides an example where we delegate to the `type_ribbon`
+drawing code.)
+
+Beyond that, the **tinyplot** team are always happy to help guide users on how
+to create their own types. Just let us know by
+[raising an issue](https://github.com/grantmcdermott/tinyplot/issues)
+on our GitHub repo.
+
+## Appendix: Available settings {#appendix-available-settings}
+
+To see what objects and parameters are available in the `settings` environment,
+we can create a simple `type_error()` function that stops with the names of all
+available settings:
+
+```{r}
+#| error: true
+type_error = function() {
+  data_error = function() {
+    fun = function(settings, ...) {
+      stop(paste(sort(names(settings)), collapse = ", "))
+    }
+    return(fun)
+  }
+
+  out = list(
+    data = data_error()
   )
   class(out) = "tinyplot_type"
   return(out)
 }
 
-tinyplot(mpg ~ wt | factor(am), data = mtcars,
-  type = type_log(), main = "Ln")
-
-tinyplot(mpg ~ wt | factor(am), data = mtcars,
-  type = type_log(base = 10), main = "Log 10")
+tinyplot(mpg ~ wt, data = mtcars, type = type_error())
 ```
 
-To underscore what we said above, the **tinyplot**
-[source code](https://github.com/grantmcdermott/tinyplot/tree/main/R)
-contains many examples of type constructor functions that should provide a
-helpful starting point for custom plot types. Failing that, the **tinyplot**
-team are always happy to help guide users on how to create their own types and
-re-purpose existing **tinyplot** code. Just let us know by
-[raising an issue](https://github.com/grantmcdermott/tinyplot/issues)
-on our GitHub repo.
+As we can see, the `settings` environment contains many parameters that custom
+types can use as inputs or modify as needed.
+

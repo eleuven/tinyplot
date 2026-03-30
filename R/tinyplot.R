@@ -13,14 +13,20 @@
 #'   'Examples' section below, or the function
 #'   \code{\link[grDevices]{xy.coords}} for details. If supplied separately, `x`
 #'   and `y` must be of the same length.
+#' @param xmin,xmax,ymin,ymax minimum and maximum coordinates of relevant area
+#'   or interval plot types. Only used when the `type` argument is one of
+#'   `"rect"` or `"segments"` (where all four min-max coordinates are required),
+#'   or `"pointrange"`, `"errorbar"`, or `"ribbon"` (where only `ymin` and
+#'   `ymax` required alongside `x`). In the formula method the arguments
+#'   can be specified as `ymin = var` if `var` is a variable in `data`.
 #' @param by grouping variable(s). The default behaviour is for groups to be
 #'   represented in the form of distinct colours, which will also trigger an
 #'   automatic legend. (See `legend` below for customization options.) However,
-#'   groups can also be presented through other plot parameters (e.g., `pch` or
-#'   `lty`) by passing an appropriate "by" keyword; see Examples. Note that
-#'   continuous (i.e., gradient) colour legends are also supported if the user
-#'   passes a numeric or integer to `by`. To group by multiple variables, wrap
-#'   them with \code{\link[base]{interaction}}.
+#'   groups can also be presented through other plot parameters (e.g., `pch`,
+#'   `lty`, or `cex`) by passing an appropriate `"by"` keyword; see Examples.
+#'   Note that continuous (i.e., gradient) colour legends are also supported if
+#'   the user passes a numeric or integer to `by`. To group by multiple
+#'   variables, wrap them with \code{\link[base]{interaction}}.
 #' @param facet the faceting variable(s) that you want arrange separate plot
 #'   windows by. Can be specified in various ways:
 #'   - In "atomic" form, e.g. `facet = fvar`. To facet by multiple variables in
@@ -69,11 +75,14 @@
 #'   features globally for all `tinyplot` plots.
 #' @param formula a \code{\link[stats]{formula}} that optionally includes
 #'   grouping variable(s) after a vertical bar, e.g. `y ~ x | z`. One-sided
-#'   formulae are also permitted, e.g. `~ y | z`. Multiple grouping variables
-#'   can be specified in different ways, e.g. `y ~ x | z1:z2` or
+#'   formulae are also permitted, e.g. `~ y | z`. Only a single `y` and `x`
+#'   variable (if any) must be specified but multiple grouping variables
+#'   can be included in different ways, e.g. `y ~ x | z1:z2` or
 #'   `y ~ x | z1 + z2`. (These two representations are treated as equivalent;
-#'   both are parsed as `interaction(z1, z2)` internally.) Note that the
-#'   `formula` and `x` arguments should not be specified in the same call.
+#'   both are parsed as `interaction(z1, z2)` internally.) If arithmetic
+#'   operators are used for transforming variables, they should be wrapped in
+#'   `I()`, e.g., `I(y1/y2) ~ x`. Note that the `formula` and `x` arguments
+#'   should not be specified in the same call.
 #' @param data a data.frame (or list) from which the variables in formula
 #'   should be taken. A matrix is converted to a data frame.
 #' @param type character string or call to a `type_*()` function giving the
@@ -102,6 +111,7 @@
 #'       - `"segments"` / [`type_segments()`]: Draws line segments between pairs of points.
 #'       - `"text"` / [`type_text()`]: Add text annotations.
 #'     - Visualizations:
+#'       - `"barplot"` / [`type_barplot()`]: Creates a bar plot.
 #'       - `"boxplot"` / [`type_boxplot()`]: Creates a box-and-whisker plot.
 #'       - `"density"` / [`type_density()`]: Plots the density estimate of a variable.
 #'       - `"histogram"` / [`type_histogram()`]: Creates a histogram of a single variable.
@@ -110,6 +120,7 @@
 #'       - `"ridge"` / [`type_ridge()`]: Creates a ridgeline (aka joy) plot.
 #'       - `"rug"` / [`type_rug()`]: Adds a rug to an existing plot.
 #'       - `"spineplot"` / [`type_spineplot()`]: Creates a spineplot or spinogram.
+#'       - `"violin"` / [`type_violin()`]: Creates a violin plot.
 #'     - Models:
 #'       - `"loess"` / [`type_loess()`]: Local regression curve.
 #'       - `"lm"` / [`type_lm()`]: Linear regression line.
@@ -121,31 +132,35 @@
 #'       - [`type_vline()`]: vertical line(s).
 #'       - [`type_function()`]: arbitrary function.
 #'       - [`type_summary()`]: summarize `y` by unique values of `x`.
-#' @param xmin,xmax,ymin,ymax minimum and maximum coordinates of relevant area
-#'   or interval plot types. Only used when the `type` argument is one of
-#'   `"rect"` or `"segments"` (where all four min-max coordinates are required),
-#'   or `"pointrange"`, `"errorbar"`, or `"ribbon"` (where only `ymin` and
-#'   `ymax` required alongside `x`).
-#' @param xlim the x limits (x1, x2) of the plot. Note that x1 > x2 is allowed
-#'   and leads to a ‘reversed axis’. The default value, NULL, indicates that
-#'   the range of the `finite` values to be plotted should be used.
-#' @param ylim the y limits of the plot.
-#' @param log a character string which contains "x" if the x axis is to be
-#'   logarithmic, "y" if the y axis is to be logarithmic and "xy" or "yx" if
-#'   both axes are to be logarithmic.
-#' @param empty logical indicating whether the interior plot region should be
-#'  left empty. The default is `FALSE`. Setting to `TRUE` has a similar effect
-#'  to invoking `type = "n"` above, except that any legend artifacts owing to a
-#'  particular plot type (e.g., lines for `type = "l"` or squares for
-#'  `type = "area"`) will still be drawn correctly alongside the empty plot. In
-#'  contrast,`type = "n"` implicitly assumes a scatterplot and so any legend
-#'  will only depict points.
+#' @param legend one of the following options:
+#'    - NULL (default), in which case the legend will be determined by the
+#'    grouping variable. If there is no group variable (i.e., `by` is NULL) then
+#'    no legend is drawn. If a grouping variable is detected, then an automatic
+#'    legend is drawn to the _outer_ right of the plotting area. Note that the
+#'    legend title and categories will automatically be inferred from the `by`
+#'    argument and underlying data.
+#'    - A convenience string indicating the legend position. The string should
+#'    correspond to one of the position keywords supported by the base `legend`
+#'    function, e.g. "right", "topleft", "bottom", etc. In addition, `tinyplot`
+#'    supports adding a trailing exclamation point to these keywords, e.g.
+#'    "right!", "topleft!", or "bottom!". This will place the legend _outside_
+#'    the plotting area and adjust the margins of the plot accordingly. Finally,
+#'    users can also turn off any legend printing by specifying "none".
+#'    - Logical value, where TRUE corresponds to the default case above (same
+#'    effect as specifying NULL) and FALSE turns the legend off (same effect as
+#'    specifying "none").
+#'    - A list or, equivalently, a dedicated `legend()` function with supported
+#'    legend arguments, e.g. "bty", "horiz", and so forth.
 #' @param main a main title for the plot, see also `title`.
 #' @param sub a subtitle for the plot.
 #' @param xlab a label for the x axis, defaults to a description of x.
 #' @param ylab a label for the y axis, defaults to a description of y.
 #' @param ann a logical value indicating whether the default annotation (title
 #'   and x and y axis labels) should appear on the plot.
+#' @param xlim the x limits (x1, x2) of the plot. Note that x1 > x2 is allowed
+#'   and leads to a ‘reversed axis’. The default value, NULL, indicates that
+#'   the range of the `finite` values to be plotted should be used.
+#' @param ylim the y limits of the plot.
 #' @param axes logical or character. Should axes be drawn (`TRUE` or `FALSE`)?
 #'   Or alternatively what type of axes should be drawn: `"standard"` (with
 #'   axis, ticks, and labels; equivalent to `TRUE`), `"none"` (no axes;
@@ -153,6 +168,31 @@
 #'   `"labels"` (only labels without ticks and axis line), `"axis"` (only axis
 #'   line and labels but no ticks). To control this separately for the two
 #'   axes, use the character specifications for `xaxt` and/or `yaxt`.
+#' @param xaxt,yaxt character specifying the type of x-axis and y-axis,
+#'   respectively. See `axes` for the possible values.
+#' @param xaxs,yaxs character specifying the style of the interval calculation
+#'   used for the x-axis and y-axis, respectively. See
+#'   \code{\link[graphics]{par}} for the possible values.
+#' @param xaxb,yaxb numeric vector (or character vector, if appropriate) giving
+#'   the break points at which the axis tick-marks are to be drawn. Break points
+#'   outside the range of the data will be ignored if the associated axis
+#'   variable is categorical, or an explicit `x/ylim` range is given.
+#' @param xaxl,yaxl a function or a character keyword specifying the format of
+#'   the x- or y-axis tick labels. Note that this is a post-processing step that
+#'   affects the _appearance_ of the tick labels only; use in conjunction with
+#'   `x/yaxb` if you would like to adjust the position of the tick marks too. In
+#'   addition to user-supplied formatting functions (e.g., [`format`],
+#'   [`toupper`], [`abs`], or other custom function), several convenience
+#'   keywords (or their symbol equivalents) are available for common formatting
+#'   transformations: `"percent"` (`"%"`), `"comma"` (`","`), `"log"` (`"l"`),
+#'   `"dollar"` (`"$"`), `"euro"` (`"€"`), or `"sterling"` (`"£"`). See the
+#'   [`tinylabel`] documentation for examples.
+#' @param log a character string which contains `"x"` if the x axis is to be
+#'   logarithmic, `"y"` if the y axis is to be logarithmic and `"xy"` or `"yx"`
+#'   if both axes are to be logarithmic.
+#' @param flip logical. Should the plot orientation be flipped, so that the
+#'   y-axis is on the horizontal plane and the x-axis is on the vertical plane?
+#'   Default is FALSE.
 #' @param frame.plot a logical indicating whether a box should be drawn around
 #'   the plot. Can also use `frame` as an acceptable argument alias.
 #'   The default is to draw a frame if both axis types (set via `axes`, `xaxt`,
@@ -164,7 +204,6 @@
 #'   arguments from base `plot()` and tries to make the process more seamless
 #'   with better default behaviour. The default behaviour is determined by (and
 #'   can be set globally through) the value of `tpar("grid")`.
-#' @param asp the y/xy/x aspect ratio, see `plot.window`.
 #' @param palette one of the following options:
 #'    - NULL (default), in which case the palette will be chosen according to
 #'    the class and cardinality of the "by" grouping variable. For non-ordered
@@ -189,25 +228,6 @@
 #'    If too few colours are provided for a discrete (qualitative) set of
 #'    groups, then the colours will be recycled with a warning. For continuous
 #'    (sequential) groups, a gradient palette will be interpolated. 
-#' @param legend one of the following options:
-#'    - NULL (default), in which case the legend will be determined by the
-#'    grouping variable. If there is no group variable (i.e., `by` is NULL) then
-#'    no legend is drawn. If a grouping variable is detected, then an automatic
-#'    legend is drawn to the _outer_ right of the plotting area. Note that the
-#'    legend title and categories will automatically be inferred from the `by`
-#'    argument and underlying data.
-#'    - A convenience string indicating the legend position. The string should
-#'    correspond to one of the position keywords supported by the base `legend`
-#'    function, e.g. "right", "topleft", "bottom", etc. In addition, `tinyplot`
-#'    supports adding a trailing exclamation point to these keywords, e.g.
-#'    "right!", "topleft!", or "bottom!". This will place the legend _outside_
-#'    the plotting area and adjust the margins of the plot accordingly. Finally,
-#'    users can also turn off any legend printing by specifying "none".
-#'    - Logical value, where TRUE corresponds to the default case above (same
-#'    effect as specifying NULL) and FALSE turns the legend off (same effect as
-#'    specifying "none").
-#'    - A list or, equivalently, a dedicated `legend()` function with supported
-#'    legend arguments, e.g. "bty", "horiz", and so forth.
 #' @param col plotting color. Character, integer, or vector of length equal to
 #'   the number of categories in the `by` variable. See `col`. Note that the
 #'   default behaviour in `tinyplot` is to vary group colors along any variables
@@ -233,7 +253,7 @@
 #'   can supply a special `lwd = "by"` convenience argument, in which case the
 #'   line width will automatically loop over the number of groups. This
 #'   automatic looping will be centered at the global line width value (i.e.,
-# `   par("lwd")`) and pad on either side of that.
+#'   `par("lwd")`) and pad on either side of that.
 #' @param bg background fill color for the open plot symbols 21:25 (see
 #'   `points.default`), as well as ribbon and area plot types.
 #'   Users can also supply either one of two special convenience arguments that
@@ -258,17 +278,18 @@
 #'   fractional values, e.g. `0.5` for semi-transparency.
 #' @param cex character expansion. A numerical vector (can be a single value)
 #'   giving the amount by which plotting characters and symbols should be scaled
-#'   relative to the default. Note that NULL is equivalent to 1.0, while NA
-#'   renders the characters invisible.
-#' @param restore.par a logical value indicating whether the
-#'   \code{\link[graphics]{par}} settings prior to calling `tinyplot` should be
-#'   restored on exit. Defaults to FALSE, which makes it possible to add
-#'   elements to the plot after it has been drawn. However, note the the outer
-#'   margins of the graphics device may have been altered to make space for the
-#'   `tinyplot` legend. Users can opt out of this persistent behaviour by
-#'   setting to TRUE instead. See also [get_saved_par] for another option to
-#'   recover the original \code{\link[graphics]{par}} settings, as well as
-#'   longer discussion about the trade-offs involved.
+#'   relative to the default. Note that `NULL` is equivalent to 1.0, while `NA`
+#'   renders the characters invisible. There are two additional considerations,
+#'   specifically for points-alike plot types (e.g. `"p"`):
+#'   
+#'   - users can also supply a special `cex = "by"` convenience argument, in
+#'     which case the character expansion will automatically adjust by group
+#'     too. The range of this character expansion is controlled by the `clim`
+#'     argument in the respective types; see [`type_points()`] for example.
+#'   - passing a `cex` vector of equal length to the main `x` and `y` variables
+#'     (e.g., another column in the same dataset) will yield a "bubble"plot with
+#'     its own dedicated legend. This can provide a useful way to visualize an
+#'     extra dimension of the data; see Examples.
 #' @param subset,na.action,drop.unused.levels arguments passed to `model.frame`
 #'   when extracting the data from `formula` and `data`.
 #' @param add logical. If TRUE, then elements are added to the current plot rather
@@ -282,10 +303,24 @@
 #'   \code{\link[graphics]{abline}} or \code{\link[graphics]{text}}. Note that
 #'   this argument is somewhat experimental and that _no_ internal checking is
 #'   done for correctness; the provided argument is simply captured and
-#'   evaluated as-is. See Examples.
-#' @param flip logical. Should the plot orientation be flipped, so that the
-#'   y-axis is on the horizontal plane and the x-axis is on the vertical plane?
-#'   Default is FALSE.
+#'   evaluated as-is within `tinyplot()` and thus has access to the local
+#'   definition of all variables such as `x`, `y`, etc. See Examples.
+#' @param restore.par a logical value indicating whether the
+#'   \code{\link[graphics]{par}} settings prior to calling `tinyplot` should be
+#'   restored on exit. Defaults to FALSE, which makes it possible to add
+#'   elements to the plot after it has been drawn. However, note the the outer
+#'   margins of the graphics device may have been altered to make space for the
+#'   `tinyplot` legend. Users can opt out of this persistent behaviour by
+#'   setting to TRUE instead. See also [get_saved_par] for another option to
+#'   recover the original \code{\link[graphics]{par}} settings, as well as
+#'   longer discussion about the trade-offs involved.
+#' @param empty logical indicating whether the interior plot region should be
+#'  left empty. The default is `FALSE`. Setting to `TRUE` has a similar effect
+#'  to invoking `type = "n"` above, except that any legend artifacts owing to a
+#'  particular plot type (e.g., lines for `type = "l"` or squares for
+#'  `type = "area"`) will still be drawn correctly alongside the empty plot. In
+#'  contrast,`type = "n"` implicitly assumes a scatterplot and so any legend
+#'  will only depict points.
 #' @param file character string giving the file path for writing a plot to disk.
 #'   If specified, the plot will not be displayed interactively, but rather sent
 #'   to the appropriate external graphics device (i.e.,
@@ -314,11 +349,10 @@
 #' @param height numeric giving the plot height in inches. Same considerations as
 #'  `width` (above) apply, e.g. will default to `tpar("file.height")` if not
 #'  specified.
-#' @param xaxt,yaxt character specifying the type of x-axis and y-axis, respectively.
-#'   See `axes` for the possible values.
-#' @param xaxs,yaxs character specifying the style of the interval calculation used
-#'   for the x-axis and y-axis, respectively. See \code{\link[graphics]{par}}
-#'   for the possible values.
+#' @param asp the y/xy/x aspect ratio, see `plot.window`.
+#' @param theme keyword string (e.g. `"clean"`) or list defining a theme. Passed
+#'  on to [`tinytheme`], but reset upon exit so that the theme effect is only
+#'  temporary. Useful for invoking ephemeral themes. 
 #' @param ... other graphical parameters. If `type` is a character specification
 #'   (such as `"hist"`) then any argument names that match those from the corresponding
 #'   `type_*()` function (such as \code{\link{type_hist}}) are passed on to that.
@@ -334,14 +368,13 @@
 #' out existing `plot` calls for `tinyplot` (or its shorthand alias `plt`),
 #' without causing unexpected changes to the output.
 #'
-#' @importFrom grDevices axisTicks adjustcolor cairo_pdf colorRampPalette extendrange palette palette.colors palette.pals hcl.colors hcl.pals xy.coords png jpeg pdf svg dev.off dev.new dev.list
-#' @importFrom graphics abline arrows axis Axis box boxplot grconvertX grconvertY hist lines mtext par plot.default plot.new plot.window points polygon polypath segments rect text title
+#' @importFrom grDevices axisTicks adjustcolor cairo_pdf colorRampPalette dev.cur dev.list dev.off dev.new extendrange hcl.colors hcl.pals jpeg palette palette.colors palette.pals pdf png svg xy.coords
+#' @importFrom graphics abline arrows axis Axis axTicks box boxplot grconvertX grconvertY hist lines mtext par plot.default plot.new plot.window points polygon polypath segments rect text title
 #' @importFrom utils modifyList head tail
-#' @importFrom stats na.omit
+#' @importFrom stats na.omit setNames
 #' @importFrom tools file_ext
 #'
 #' @examples
-#' #'
 #' aq = transform(
 #'   airquality,
 #'   Month = factor(Month, labels = month.abb[unique(Month)])
@@ -380,6 +413,17 @@
 #'   pch = 16,
 #'   cex = 2
 #' )
+#' 
+#' # Use the special "by" convenience keyword if you would like to map these
+#' # aesthetic features over groups too (i.e., in addition to the default
+#' # colour grouping)
+#' 
+#' tinyplot(
+#'   Temp ~ Day | Month,
+#'   data = aq,
+#'   pch = "by",
+#'   cex = "by"
+#' )
 #'
 #' # We can add alpha transparency for overlapping points
 #'
@@ -393,7 +437,7 @@
 #'
 #' # To get filled points with a common solid background color, use an
 #' # appropriate plotting character (21:25) and combine with one of the special
-#' # `bg` convenience arguments.
+#' # `bg`/`fill` convenience arguments.
 #' tinyplot(
 #'   Temp ~ Day | Month,
 #'   data = aq,
@@ -401,6 +445,18 @@
 #'   cex = 2,
 #'   bg = 0.3, # numeric in [0,1] adds a grouped background fill with transparency
 #'   col = "black" # override default color mapping; give all points a black border
+#' )
+#' 
+#' # Aside: For "bubble" plots, pass an appropriate vector to the `cex` arg.
+#' # This can be useful for depicting an additional dimension of the data (here:
+#' # Wind).
+#' tinyplot(
+#'   Temp ~ Day | Month,
+#'   data = aq,
+#'   pch = 21,
+#'   cex = aq$Wind, # map character size to another feature in the data
+#'   bg = 0.3,
+#'   col = "black"
 #' )
 #'
 #' # Converting to a grouped line plot is a simple matter of adjusting the
@@ -535,26 +591,38 @@ tinyplot =
 tinyplot.default = function(
     x = NULL,
     y = NULL,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL,
     by = NULL,
     facet = NULL,
     facet.args = NULL,
     data = NULL,
     weights = NULL,
     type = NULL,
-    xlim = NULL,
-    ylim = NULL,
-    log = "",
+    legend = NULL,
     main = NULL,
     sub = NULL,
     xlab = NULL,
     ylab = NULL,
     ann = par("ann"),
+    xlim = NULL,
+    ylim = NULL,
     axes = TRUE,
+    xaxt = NULL,
+    yaxt = NULL,
+    xaxs = NULL,
+    yaxs = NULL,
+    xaxb = NULL,
+    yaxb = NULL,
+    xaxl = NULL,
+    yaxl = NULL,
+    log = "",
+    flip = FALSE,
     frame.plot = NULL,
-    asp = NA,
     grid = NULL,
     palette = NULL,
-    legend = NULL,
     pch = NULL,
     lty = NULL,
     lwd = NULL,
@@ -562,102 +630,40 @@ tinyplot.default = function(
     bg = NULL,
     fill = NULL,
     alpha = NULL,
-    cex = 1,
-    restore.par = FALSE,
-    xmin = NULL,
-    xmax = NULL,
-    ymin = NULL,
-    ymax = NULL,
+    cex = NULL,
     add = FALSE,
     draw = NULL,
+    empty = FALSE,
+    restore.par = FALSE,
     file = NULL,
     width = NULL,
     height = NULL,
-    empty = FALSE,
-    xaxt = NULL,
-    yaxt = NULL,
-    flip = FALSE,
-    xaxs = NULL,
-    yaxs = NULL,
+    asp = NA,
+    theme = NULL,
     ...) {
+
+  # Force evaluation of legend if it's a symbol to avoid downstream promise
+  # issues. Let sanitize_legend handle it
+  if (!missing(legend) && is.symbol(substitute(legend))) {
+    legend = legend
+  }
+
+  #
+  ## save parameters and calls -----
+  #
   par_first = get_saved_par("first")
   if (is.null(par_first)) set_saved_par("first", par())
-
+  
   # save for tinyplot_add()
-  if (!isTRUE(add)) {
+  assert_logical(add)
+  if (!add) {
     calls = sys.calls()
-    idx = grep("^tinyplot", sapply(calls, function(k) k[[1]]))
+    is_tinyplot_call = function(x) identical(tinyplot, try(eval(x[[1L]]), silent = TRUE))
+    idx = which(vapply(calls, is_tinyplot_call, FALSE))
     if (length(idx) > 0) {
-      options(tinyplot_last_call = calls[[idx[1]]])
+      set_environment_variable(.last_call = calls[[idx[1L]]])
     }
   }
-
-  ## TODO: remove the global option above and move to this when density is refactored
-  # cal = match.call(call = sys.call(sys.parent()), expand.dots = TRUE)
-  # assign(".last_call", cal, envir = get(".tinyplot_env", envir = parent.env(environment())))
-
-  dots = list(...)
-
-  if (isTRUE(add)) legend = FALSE
-  draw = substitute(draw)
-
-
-  # sanitize arguments
-
-  # type factories vs. strings
-  type = sanitize_type(type, x, y, dots)
-  if ("dots" %in% names(type)) dots = type$dots
-  
-  # retrieve type-specific data and drawing functions
-  type_data = type$data
-  type_draw = type$draw
-  type = type$name
-  
-  # area flag (mostly for legend)
-  was_area_type = identical(type, "area")
-  # check flip flag is logical 
-  assert_flag(flip)
-
-  palette = substitute(palette)
-
-  # themes
-  if (is.null(palette)) palette = get_tpar("palette", default = NULL)
-  if (is.null(pch)) pch = get_tpar("pch", default = NULL)
-
-  xlabs = ylabs = NULL
-
-  # type_ridge()
-  ygroup = NULL
-
-  # will be overwritten by some type_data() functions and ignored by others
-  ribbon.alpha = sanitize_ribbon.alpha(NULL)
-
-  ## handle defaults of axes, xaxt, yaxt, frame.plot
-  ## - convert axes to character if necessary
-  ## - set defaults of xaxt/yaxt (if these are NULL) based on axes
-  ## - set logical axes based on xaxt/yaxt
-  ## - set frame.plot default based on xaxt/yaxt
-  if (isFALSE(axes)) {
-    axes = xaxt = yaxt = "none"
-  } else if (isTRUE(axes)) {
-    axes = "standard"
-    if (is.null(xaxt)) xaxt = get_tpar("xaxt", default = "standard")
-    if (is.null(yaxt)) yaxt = get_tpar("yaxt", default = "standard")
-  } else {
-    xaxt = yaxt = axes
-  }
-  axis_types = c("standard", "none", "labels", "ticks", "axis")
-  axes = match.arg(axes, axis_types)
-  xaxt = match.arg(xaxt, axis_types)
-  yaxt = match.arg(yaxt, axis_types)
-  xaxt = substr(match.arg(xaxt, axis_types), 1L, 1L)
-  yaxt = substr(match.arg(yaxt, axis_types), 1L, 1L)
-  axes = any(c(xaxt, yaxt) != "n")
-  if (is.null(frame.plot) || !is.logical(frame.plot)) frame.plot = all(c(xaxt, yaxt) %in% c("s", "a"))
-
-  # Write plot to output file or window with fixed dimensions
-  setup_device(file = file, width = width, height = height)
-  if (!is.null(file)) on.exit(dev.off(), add = TRUE)
 
   # Save current graphical parameters
   opar = par(no.readonly = TRUE)
@@ -667,319 +673,310 @@ tinyplot.default = function(
     }
     on.exit(par(opar), add = TRUE)
   }
-  # set_orig_par(opar)
   set_saved_par(when = "before", opar)
 
-  # catch for adding to existing facet plot
-  if (!is.null(facet) && isTRUE(add)) {
-    par(get_saved_par(when = "after"))
-  }
-
-  # Capture deparsed expressions early, before x, y and by are evaluated
-  x_dep = if (!is.null(x)) {
-    deparse1(substitute(x))
-  } else if (type %in% c("rect", "segments")) {
-    x = NULL
-    NULL
-  }
-  y_dep = if (is.null(y)) {
-    deparse1(substitute(x))
-  } else {
-    deparse1(substitute(y))
-  }
-  by_dep = deparse1(substitute(by))
-
-  ## coerce character variables to factors
-  if (!is.null(x) && is.character(x)) x = factor(x)
-  if (!is.null(y) && is.character(y)) y = factor(y)
-  if (!is.null(by) && is.character(by)) by = factor(by)
-
-  # flag if x==by (currently only used for "boxplot", "spineplot" and "ridges" types)
-  x_by = identical(x, by)
-
-  facet_dep = deparse1(substitute(facet))
-  # flag if facet==by
-  facet_by = FALSE
-  if (!is.null(facet) && length(facet) == 1 && facet == "by") {
-    by = as.factor(by) ## if by==facet, then both need to be factors
-    facet = by
-    facet_by = TRUE
-  } else if (!is.null(facet) && inherits(facet, "formula")) {
-    facet = get_facet_fml(facet, data = data)
-    if (isTRUE(attr(facet, "facet_grid"))) {
-      facet.args[["nrow"]] = attr(facet, "facet_nrow")
-    }
-  }
-  facet_attr = attributes(facet) ## TODO: better solution for restoring facet attributes?
-
-  if (is.null(x)) {
-    ## Special catch for rect and segment plots without a specified y-var
-    if (type %in% c("rect", "segments")) {
-      xmin_dep = deparse(substitute(xmin))
-      xmax_dep = deparse(substitute(xmax))
-      x_dep = paste0("[", xmin_dep, ", ", xmax_dep, "]")
-      x = rep(NA, length(x))
-    }
-  }
-  if (is.null(y)) {
-    ## Special catch for area and interval plots without a specified y-var
-    if (type %in% c("rect", "segments", "pointrange", "errorbar", "ribbon")) {
-      ymin_dep = deparse(substitute(ymin))
-      ymax_dep = deparse(substitute(ymax))
-      y_dep = paste0("[", ymin_dep, ", ", ymax_dep, "]")
-      y = rep(NA, length(x))
-    } else if (type == "density") {
-      if (is.null(ylab)) ylab = "Density"
-    # } else if (type %in% c("histogram", "function")) {
-    } else if (type == "function") {
-      if (is.null(ylab)) ylab = "Frequency"
-    } else if (type != "histogram") {
-      y = x
-      x = seq_along(x)
-      if (is.null(xlab)) xlab = "Index"
-    }
-  }
-
-  if (is.null(xlab)) xlab = x_dep
-  # if (is.null(ylab)) ylab = y_dep
-  if (is.null(ylab) && type != "histogram") ylab = y_dep
-
-  # alias
-  if (is.null(bg) && !is.null(fill)) bg = fill
-
-  datapoints = list(x = x, y = y, weights = weights, xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax, ygroup = ygroup)
-  datapoints = Filter(function(z) length(z) > 0, datapoints)
-  datapoints = data.frame(datapoints)
-  if (nrow(datapoints) > 0) {
-    datapoints[["rowid"]] = seq_len(nrow(datapoints))
-    datapoints[["facet"]] = if (!is.null(facet)) facet else ""
-    datapoints[["by"]] = if (!is.null(by)) by else ""
-  }
-
-  ## initialize empty list with information that type_data
-  ## can overwrite in order to pass on to type_draw
-  type_info = list()
-
-  if (!is.null(type_data)) {
-    fargs = list(
-      datapoints = datapoints,
-      bg = bg,
-      by = by,
-      col = col,
-      lty = lty,
-      facet = facet,
-      facet.args = facet.args,
-      palette = palette,
-      ribbon.alpha = ribbon.alpha,
-      xaxt = xaxt,
-      xlabs = xlabs,
-      xlim = xlim,
-      yaxt = yaxt,
-      ylab = ylab,
-      ylim = ylim)
-    fargs = c(fargs, dots)
-    list2env(do.call(type_data, fargs), environment())
-  }
-
-
-  # swap x and y values if flip is TRUE
-  assert_flag(flip)
-  # extra catch for boxplots
-  # now swap the values
-  if (isTRUE(flip)) {
-    if (type != "boxplot") {
-      # limits, labs, etc.
-      xlim_cp = xlim
-      xlim = ylim
-      ylim = xlim_cp
-      xlab_cp = xlab
-      xlab = ylab
-      ylab = xlab_cp
-      xlabs_cp = xlabs
-      xlabs = ylabs
-      ylabs = xlabs_cp
-      xaxt_cp = xaxt
-      xaxt = yaxt
-      yaxt = xaxt_cp
-      if (!is.null(log)) {
-        log = if (log == "x") "y" else if (log == "y") "x" else log
-      }
-      # x/y vars
-      x_cp = datapoints[["x"]]
-      datapoints[["x"]] = datapoints[["y"]]
-      datapoints[["y"]] = x_cp
-      # x/y min and max vars
-      xmin_cp = if (!is.null(datapoints[["xmin"]])) datapoints[["xmin"]] else NULL
-      datapoints[["xmin"]] = if (!is.null(datapoints[["ymin"]])) datapoints[["ymin"]] else NULL
-      datapoints[["ymin"]] = if (!is.null(xmin_cp)) xmin_cp else NULL
-      xmax_cp = if (!is.null(datapoints[["xmax"]])) datapoints[["xmax"]] else NULL
-      datapoints[["xmax"]] = if (!is.null(datapoints[["ymax"]])) datapoints[["ymax"]] else NULL
-      datapoints[["ymax"]] = if (!is.null(xmax_cp)) xmax_cp else NULL
-      # clean up
-      rm(xlim_cp, xlab_cp, xlabs_cp, xaxt_cp, x_cp, xmin_cp, xmax_cp)
-    } else {
-      # We'll let boxplot(..., horizontal = TRUE) handle most of the adjustments
-      # and just catch a few elements that we draw beforehand.
-      xlab_cp = xlab
-      xlab = ylab
-      ylab = xlab_cp
-      rm(xlab_cp)
-    }
-  }
-
-
-  # plot limits
-  fargs = lim_args(datapoints = datapoints, xlim = xlim, ylim = ylim, type = type)
-  list2env(fargs, environment())
-
-
-  # split data
-  by_ordered = FALSE
-  by_continuous = !is.null(by) && inherits(datapoints$by, c("numeric", "integer"))
-  if (isTRUE(by_continuous) && type %in% c("l", "b", "o", "ribbon", "polygon", "polypath", "boxplot")) {
-    warning("\nContinuous legends not supported for this plot type. Reverting to discrete legend.")
-    by_continuous = FALSE
-  } else if (!is.null(by)) {
-    by_ordered = is.ordered(by)
-  }
-
-  if (length(unique(datapoints$facet)) == 1) {
-    datapoints[["facet"]] = NULL
-  }
-  if (!is.null(datapoints$facet)) {
-    split_data = split(datapoints, datapoints$facet)
-    split_data = lapply(split_data, as.list)
-  } else {
-    split_data = list(as.list(datapoints))
-  }
-
-  # aesthetics by group: col, bg, etc.
-  ngrps = if (is.null(by)) 1L else if (is.factor(by)) length(levels(by)) else if (by_continuous) 100L else length(unique(by))
-  pch = by_pch(ngrps = ngrps, type = type, pch = pch)
-  lty = by_lty(ngrps = ngrps, type = type, lty = lty)
-  lwd = by_lwd(ngrps = ngrps, type = type, lwd = lwd)
-  col = by_col(
-    ngrps = ngrps, col = col, palette = palette,
-    gradient = by_continuous, ordered = by_ordered, alpha = alpha)
-  bg = by_bg(
-    adjustcolor = adjustcolor, alpha = alpha, bg = bg, by = by, by_continuous = by_continuous,
-    by_ordered = by_ordered, col = col, fill = fill, palette = substitute(palette),
-    ribbon.alpha = ribbon.alpha, ngrps = ngrps, type = type)
-
-  ncolors = length(col)
-  lgnd_labs = rep(NA, times = ncolors)
-  if (isTRUE(by_continuous)) {
-    ## Identify the pretty break points for our labels
-    nlabs = 5
-    ncolors = length(col)
-    ubyvar = unique(by)
-    byvar_range = range(ubyvar)
-    pbyvar = pretty(byvar_range, n = nlabs)
-    pbyvar = pbyvar[pbyvar >= byvar_range[1] & pbyvar <= byvar_range[2]]
-    # optional thinning
-    if (length(ubyvar) == 2 && all(ubyvar %in% pbyvar)) {
-      pbyvar = ubyvar
-    } else if (length(pbyvar) > nlabs) {
-      pbyvar = pbyvar[seq_along(pbyvar) %% 2 == 0]
-    }
-    ## Find the (approximate) location of our pretty labels
-    pidx = rescale_num(c(byvar_range, pbyvar), to = c(1, ncolors))[-c(1:2)]
-    pidx = round(pidx)
-    lgnd_labs[pidx] = pbyvar
-  }
-
-  # Determine the number and arrangement of facets.
-  # Note: We're do this up front, so we can make some adjustments to legend cex
-  #   next (if there are facets). But the actual drawing of the facets will only
-  #   come later.
-  attributes(facet) = facet_attr ## TODO: better solution for restoring facet attributes?
-  fargs = facet_layout(facet = facet, facet.args = facet.args, add = add)
-  list2env(fargs, environment())
-
-  #
-  ## Global plot elements (legend and titles)
-  #
-
-  # place and draw the legend
-  has_legend = FALSE # simple indicator variable for later use
-
-  if (!exists("legend_args")) {
-    legend_args = dots[["legend_args"]]
-  }
-  if (is.null(legend_args)) legend_args = list(x = NULL)
-  legend = substitute(legend)
-
-  if (isFALSE(legend)) {
-    legend = "none"
-  } else if (isTRUE(legend)) {
-    legend = NULL
-  }
-  if (!is.null(legend) && legend == "none") {
-    legend_args[["x"]] = "none"
-  }
-
-  if (is.null(by)) {
-    if (is.null(legend)) {
-      legend = "none"
-      legend_args[["x"]] = "none"
-    }
-  }
-
-  if ((is.null(legend) || legend != "none") && isFALSE(add)) {
-    if (isFALSE(by_continuous)) {
-      if (ngrps > 1) {
-        lgnd_labs = if (is.factor(datapoints$by)) levels(datapoints$by) else unique(datapoints$by)
-      } else {
-        lgnd_labs = ylab
-      }
-    }
-
-    has_sub = !is.null(sub)
-
-    if (isTRUE(was_area_type) || isTRUE(type %in% c("area", "rect", "hist", "histogram"))) {
-      legend_args[["pt.lwd"]] = par("lwd")
-      legend_args[["lty"]] = 0
-    }
-
-    draw_legend(
-      legend = legend,
-      legend_args = legend_args,
-      by_dep = by_dep,
-      lgnd_labs = lgnd_labs,
-      type = type,
-      pch = pch,
-      lty = lty,
-      lwd = lwd,
-      col = col,
-      bg = bg,
-      gradient = by_continuous,
-      cex = cex * cex_fct_adj,
-      has_sub = has_sub
+  # Catch for adding to existing facet plot
+  if (!is.null(facet) && add) {
+    recordGraphics(
+      par(get_saved_par(when = "after")),
+      list = list(),
+      env = getNamespace('tinyplot')
     )
+  }
+
+  # Ephemeral theme
+  if (!is.null(theme)) {
+    if (is.character(theme) && length(theme) == 1) {
+      tinytheme(theme)
+    } else if (is.list(theme)) {
+      do.call(tinytheme, theme)
+    } else {
+      warning('Argument `theme` must be a character of length 1 (e.g. "clean"), or a list. Ignoring.')
+    }
+    if (is.character(theme) && theme == "default") {
+      # Reset mar to pre-theme value so legend margin adjustment isn't
+      # clobbered. Only needed for "default" theme which uses hook = FALSE
+      # and thus sets par(mar) immediately. (#557)
+      par(mar = opar$mar)
+      on.exit(init_tpar(rm_hook = TRUE), add = TRUE)
+    } else {
+      dtheme = theme_default
+      otheme = opar[names(dtheme)]
+      on.exit(do.call(tinytheme, otheme), add = TRUE)
+    }
+  }
+
+  #
+  ## settings container -----
+  #
+
+  dots = list(...)
+
+  settings_list = list(
+    # save call to check user input later
+    call          = match.call(),
+
+    # save to file & device dimensions
+    file          = file,
+    width         = width,
+    height        = height,
+
+    # deparsed input for use in labels
+    by_dep        = deparse1(substitute(by)),
+    cex_dep       = if (!is.null(cex)) deparse1(substitute(cex)) else NULL,
+    facet_dep     = deparse1(substitute(facet)),
+    x_dep         = if (is.null(x))    NULL else deparse1(substitute(x)),
+    xmax_dep      = if (is.null(xmax)) NULL else deparse1(substitute(xmax)),
+    xmin_dep      = if (is.null(xmin)) NULL else deparse1(substitute(xmin)),
+    y_dep         = if (is.null(y))    NULL else deparse1(substitute(y)),
+    ymax_dep      = if (is.null(ymax)) NULL else deparse1(substitute(ymax)),
+    ymin_dep      = if (is.null(ymin)) NULL else deparse1(substitute(ymin)),
+
+    # types
+    type          = type,
+    type_data     = NULL,
+    type_draw     = NULL,
+    type_name     = NULL,
+
+    # type-specific settings
+    bubble        = FALSE,
+    bubble_pch    = NULL,
+    bubble_alpha  = NULL,
+    bubble_bg_alpha = NULL,
+    ygroup        = NULL,  # for type_ridge()
+
+    # data points and labels
+    x             = x,
+    xmax          = xmax,
+    xmin          = xmin,
+    xlab          = xlab,
+    xlabs         = NULL,
+    y             = y,
+    ymax          = ymax,
+    ymin          = ymin,
+    weights       = weights,
+    ylab          = ylab,
+    ylabs         = NULL,
+
+    # axes
+    axes          = axes,
+    xaxt          = xaxt,
+    xaxb          = xaxb,
+    xaxl          = xaxl,
+    xaxs          = xaxs,
+    yaxt          = yaxt,
+    yaxb          = yaxb,
+    yaxl          = yaxl,
+    yaxs          = yaxs,
+    frame.plot    = frame.plot,
+    xlim          = xlim,
+    ylim          = ylim,
+
+    # flags to check user input (useful later on)
+    null_by       = is.null(by),
+    null_xlim     = is.null(xlim),
+    null_ylim     = is.null(ylim),
+    # when palette functions need pre-processing this check raises error
+    null_palette  = tryCatch(is.null(palette), error = function(e) FALSE),
+    x_by          = identical(x, by), # for "boxplot", "spineplot" and "ridge"
+
+    # unevaluated expressions with side effects
+    draw          = substitute(draw),
+    facet         = facet,
+    facet.args    = facet.args,
+    palette       = substitute(palette),
+    legend        = if (add) FALSE else substitute(legend),
+
+    # aesthetics
+    lty           = lty,
+    lwd           = lwd,
+    col           = col,
+    bg            = bg,
+    log           = log,
+    fill          = fill,
+    alpha         = alpha,
+    cex           = cex,
+    pch           = if (is.null(pch)) get_tpar("pch", default = NULL) else pch,
+
+    # ribbon.alpha overwritten by some type_data() functions
+    # sanitize_ribbon_alpha: returns default alpha transparency for ribbon-type plots
+    ribbon.alpha  = sanitize_ribbon_alpha(NULL),
+
+    # misc
+    add           = add,
+    by            = by,
+    dodge         = NULL,
+    dots          = dots,
+    flip          = flip,
+    group_offsets = NULL,
+    offsets_axis  = NULL,
+    type_info     = list() # pass type-specific info from type_data to type_draw
+  )
+
+  settings = new.env()
+  list2env(settings_list, settings)
+
+  #
+  ## devices and files -----
+  #
+  # Write plot to output file or window with fixed dimensions
+  setup_device(settings)
+  if (!is.null(settings$file)) on.exit(dev.off(), add = TRUE)
+
+
+  #
+  ## sanitize arguments -----
+  #
+
+  # extract legend_args from dots
+  if ("legend_args" %in% names(dots)) {
+    settings$legend_args = settings$dots[["legend_args"]]
+    settings$dots$legend_args = NULL # avoid passing both directly and via ...
+  } else {
+    settings$legend_args = list(x = NULL)
+  }
+
+  # alias: bg = fill
+  if (is.null(bg) && !is.null(fill)) settings$bg = fill
+
+  # validate types and returns a list with name, data, and draw components
+  sanitize_type(settings)
+  
+  # standardize axis arguments and returns consistent axes, xaxt, yaxt, frame.plot
+  sanitize_axes(settings)
+
+  # generate appropriate axis labels based on input data and plot type
+  sanitize_xylab(settings)
+
+  # palette default
+  if (is.null(settings$palette)) {
+    settings$palette = get_tpar("palette", default = NULL)
+  }
+
+  # by: coerce character groups to factor
+  if (!settings$null_by && is.character(settings$by)) {
+    settings$by = factor(settings$by)
+  }
+
+  # flag if x==by, currently only used for 
+  # 
+
+
+  # facet: parse facet formula and prepares variables when facet==by
+  sanitize_facet(settings)
+
+  # x / y processing
+  # convert characters to factors
+  # set x automatically when omitted (ex: rect)
+  # set y automatically when omitted (ex: boxplots)
+  # combine x, y, xmax, by, facet etc. into a single `datapoints` data.frame
+  sanitize_datapoints(settings)
+
+
+  #
+  ## transform datapoints using type_data() -----
+  #
+
+  if (!is.null(settings$type_data)) {
+    settings$type_data(settings, ...)
+  }
+
+  # ensure axis aligment of any added layers
+  if (!add) {
+    assign("xlabs_orig", settings[["xlabs"]], envir = get(".tinyplot_env", envir = parent.env(environment())))
+    assign(".group_offsets", settings[["group_offsets"]], envir = get(".tinyplot_env", envir = parent.env(environment())))
+    assign(".offsets_axis", settings[["offsets_axis"]], envir = get(".tinyplot_env", envir = parent.env(environment())))
+  } else {
+    align_layer(settings)
+  }
+
+  # flip -> swap x and y after type_data, except for boxplots (which has its own bespoke flip logic)
+  flip_datapoints(settings)
+
+
+  #
+  ## bubble plot -----
+  #
+  
+  # Transform cex values for bubble charts. Handles size transformation, legend
+  # gotchas, and aesthetic sanitization.
+  # Currently limited to "p" and "text" types, but could expand to others.
+  bubble(settings)
+
+
+  #
+  ## axis breaks and limits -----
+  #
+  
+  # do this after computing yaxb because limits will depend on the previous calculations
+  if (!add) {
+    lim_args(settings)
+  }
+
+  #
+  ## facets: count -----
+  #
+
+  # facet_layout processes facet simplification, attribute restoration, and layout
+  facet_layout(settings)
+
+
+  #
+  ## aesthetics by group -----
+  #
+  
+  by_aesthetics(settings)
+
+
+  #
+  ## legends -----
+  #
+  
+  prepare_legend(settings)
+
+  #
+  ## make settings available in the environment directly -----
+  #
+
+  env2env(settings, environment())
+
+  if (legend_draw_flag) {
+    if (!multi_legend) {
+      ## simple case: single legend only
+      if (is.null(lgnd_cex)) lgnd_cex = cex * cex_fct_adj
+      draw_legend(
+        legend = legend,
+        legend_args = legend_args,
+        by_dep = by_dep,
+        lgnd_labs = lgnd_labs,
+        type = type,
+        pch = pch,
+        lty = lty,
+        lwd = lwd,
+        col = col,
+        bg = bg,
+        gradient = by_continuous,
+        cex = lgnd_cex,
+        has_sub = has_sub
+      )
+    } else {
+      ## multi-legend case...
+      prepare_legend_multi(settings)
+      env2env(settings, environment(), c("legend_args", "lgby", "lgbub"))
+      # draw multi-legend
+      draw_multi_legend(list(lgby, lgbub), position = legend_args[["x"]])
+
+    }
 
     has_legend = TRUE
-  } else if (legend_args[["x"]] == "none" && isFALSE(add)) {
+    } else if (legend_args[["x"]] == "none" && !isTRUE(add)) {
     omar = par("mar")
     ooma = par("oma")
     topmar_epsilon = 0.1
 
     # Catch to avoid recursive offsets, e.g. repeated tinyplot calls with
     # "bottom!" legend position.
-
-    ## restore inner margin defaults
-    ## (in case the plot region/margins were affected by the preceding tinyplot call)
-    if (any(ooma != 0)) {
-      if (ooma[1] != 0 && omar[1] == par("mgp")[1] + 1 * par("cex.lab")) omar[1] = 5.1
-      if (ooma[2] != 0 && omar[2] == par("mgp")[1] + 1 * par("cex.lab")) omar[2] = 4.1
-      if (ooma[3] == topmar_epsilon && omar[3] != 4.1) omar[3] = 4.1
-      if (ooma[4] != 0 && omar[4] == 0) omar[4] = 2.1
-      par(mar = omar)
-    }
-    ## restore outer margin defaults (with a catch for custom mfrow plots)
-    if (all(par("mfrow") == c(1, 1))) {
-      par(omd = c(0, 1, 0, 1))
-    }
-
+    restore_margin_inner(ooma)
     # clean up for now
     rm(omar, ooma, topmar_epsilon)
 
@@ -987,89 +984,30 @@ tinyplot.default = function(
     plot.new()
   }
 
-  # Titles. Only draw these if add = FALSE
-  if (isFALSE(add)) {
-    # main title
-    # Note that we include a special catch for the main title if legend is
-    # "top!" (and main is specified in the first place).
-    legend_eval = tryCatch(eval(legend), error = function(e) NULL)
-    # Extra bit of footwork if user passed legend = legend(...) instead of
-    # legend = list(...), since the call environment is tricky
-    if (is.null(legend_eval)) {
-      legend_eval = tryCatch(paste0(legend)[[2]], error = function(e) NULL)
-    }
 
-    adj_title = !is.null(legend) && (legend == "top!" || (!is.null(legend_args[["x"]]) && legend_args[["x"]] == "top!") || (is.list(legend_eval) && legend_eval[[1]] == "top!"))
+  #
+  ## title and subtitle -----
+  #
 
-    # For the "top!" legend case, bump main title up to make space for the
-    # legend beneath it: Take the normal main title line gap (i.e., 1.7 lines)
-    # and add the difference between original top margin and new one (i.e.,
-    # which should equal the height of the new legend). Note that we also
-    # include a 0.1 epsilon bump, which we're using to reset the tinyplot
-    # window in case of recursive "top!" calls. (See draw_legend code.)
-
-    if (isTRUE(adj_title)) {
-      line_main = par("mar")[3] - opar[["mar"]][3] + 1.7 + 0.1
-    } else {
-      line_main = NULL
-    }
-
-    if (!is.null(sub)) {
-      if (isTRUE(get_tpar("side.sub", 1) == 3)) {
-        if (is.null(line_main)) line_main = par("mgp")[3] + 1.7 - .1
-        line_main = line_main + 1.2
-      }
-      if (isTRUE(get_tpar("side.sub", 1) == 3)) {
-        line_sub = get_tpar("line.sub", 1.7)
-      } else {
-        line_sub = get_tpar("line.sub", 4)
-      }
-      args = list(
-        text = sub,
-        line = line_sub,
-        cex = get_tpar("cex.sub", 1.2),
-        col = get_tpar("col.sub", "black"),
-        adj = get_tpar(c("adj.sub", "adj")),
-        font = get_tpar("font.sub", 1),
-        side = get_tpar("side.sub", 1),
-        las = 1
-      )
-      args = Filter(function(x) !is.null(x), args)
-      do.call(mtext, args)
-    }
-
-    if (!is.null(main)) {
-      args = list(
-        main = main,
-        line = line_main,
-        cex.main = get_tpar("cex.main", 1.4),
-        col.main = get_tpar("col.main", "black"),
-        font.main = get_tpar("font.main", 2),
-        adj = get_tpar(c("adj.main", "adj"), 3))
-      args = Filter(function(x) !is.null(x), args)
-      do.call(title, args)
-    }
-
-
-    # Axis titles
-    args = list(xlab = xlab)
-    args[["adj"]] = get_tpar(c("adj.xlab", "adj"))
-    do.call(title, args)
-    args = list(ylab = ylab)
-    args[["adj"]] = get_tpar(c("adj.ylab", "adj"))
-    do.call(title, args)
+  if (!add) {
+    draw_title(main, sub, xlab, ylab, legend, legend_args, opar)
   }
 
+
   #
-  ## Facet windows
+  ## facets: draw -----
   #
+
+  # Two-phase plotting logic: First determine and draw all exterior elements 
+  # (facet windows, axes, grid, etc.), then circle back to each facet and 
+  # draw the interior elements (grouped points, lines, etc.)
 
   omar = NULL # Placeholder variable for now, which we re-assign as part of facet margins
 
   # placeholders for facet_window_args() call
   facet_newlines = facet_text = facet_rect = facet_font = facet_col = facet_bg = facet_border = NULL
 
-  if (!is.null(facet) && isFALSE(add)) {
+  if (!is.null(facet) && !add) {
     if (is.null(omar)) omar = par("mar")
 
     # Grab some of the customizable facet args that we'll be using later
@@ -1101,46 +1039,86 @@ tinyplot.default = function(
   }
 
   # Now draw the individual facet windows (incl. axes, grid lines, and facet titles)
-  # Skip if adding to an existing plot
+  # Will be skipped if adding to an existing plot; see ?facet
 
-  facet_window_args = draw_facet_window(
-    add = add, asp = asp, axes = axes, cex_fct_adj = cex_fct_adj, dots = dots,
-    facet = facet, facet.args = facet.args, facet_newlines = facet_newlines,
-    facet_rect = facet_rect, facet_text = facet_text, facet_font = facet_font,
-    facet_col = facet_col, facet_bg = facet_bg, facet_border = facet_border,
-    facets = facets, ifacet = ifacet,
-    nfacet_cols = nfacet_cols, nfacet_rows = nfacet_rows, nfacets = nfacets,
-    frame.plot = frame.plot, grid = grid,
-    has_legend = has_legend, log = log,
-    oxaxis = oxaxis, oyaxis = oyaxis, type = type,
-    x = datapoints$x,
-    y = datapoints$y,
-    xmax = datapoints$xmax, xmin = datapoints$xmin,
-    ymax = datapoints$ymax, ymin = datapoints$ymin,
-    xaxt = xaxt, xlabs = xlabs, xlim = xlim,
-    yaxt = yaxt, ylabs = ylabs, ylim = ylim,
-    flip = flip,
-    draw = draw,
-    xaxs = xaxs, yaxs = yaxs
+  facet_window_args = recordGraphics(
+    draw_facet_window(
+      add = add,
+      # facet-specific args
+      cex_fct_adj = cex_fct_adj,
+      facet.args = facet.args,
+      facet_newlines = facet_newlines, facet_font = facet_font,
+      facet_rect = facet_rect, facet_text = facet_text,
+      facet_col = facet_col, facet_bg = facet_bg, facet_border = facet_border,
+      facet = facet,
+      facets = facets, ifacet = ifacet,
+      nfacets = nfacets, nfacet_cols = nfacet_cols, nfacet_rows = nfacet_rows,
+      # axes args
+      axes = axes, flip = flip, frame.plot = frame.plot,
+      oxaxis = oxaxis, oyaxis = oyaxis,
+      xlabs = xlabs, xlim = xlim, null_xlim = null_xlim, xaxt = xaxt, xaxs = xaxs, xaxb = xaxb, xaxl = xaxl,
+      ylabs = ylabs, ylim = ylim, null_ylim = null_ylim, yaxt = yaxt, yaxs = yaxs, yaxb = yaxb, yaxl = yaxl,
+      asp = asp, log = log,
+      # other args (in approx. alphabetical + group ordering)
+      dots = dots,
+      draw = draw,
+      grid = grid,
+      has_legend = has_legend,
+      type = type,
+      x = x, xmax = xmax, xmin = xmin,
+      y = y, ymax = ymax, ymin = ymin,
+      tpars = tpars
+    ),
+    list = list(
+      add = add,
+      cex_fct_adj = cex_fct_adj,
+      facet.args = facet.args,
+      facet_newlines = facet_newlines, facet_font = facet_font,
+      facet_rect = facet_rect, facet_text = facet_text,
+      facet_col = facet_col, facet_bg = facet_bg, facet_border = facet_border,
+      facet = datapoints$facet,
+      facets = facets, ifacet = ifacet,
+      nfacets = nfacets, nfacet_cols = nfacet_cols, nfacet_rows = nfacet_rows,
+      axes = axes, flip = flip, frame.plot = frame.plot,
+      oxaxis = oxaxis, oyaxis = oyaxis,
+      xlabs = xlabs, xlim = xlim, null_xlim = null_xlim, xaxt = xaxt, xaxs = xaxs, xaxb = xaxb, xaxl = xaxl,
+      ylabs = ylabs, ylim = ylim, null_ylim = null_ylim, yaxt = yaxt, yaxs = yaxs, yaxb = yaxb, yaxl = yaxl,
+      asp = asp, log = log,
+      dots = dots,
+      draw = draw,
+      grid = grid,
+      has_legend = has_legend,
+      type = type,
+      x = datapoints$x, xmax = datapoints$xmax, xmin = datapoints$xmin,
+      y = datapoints$y, ymax = datapoints$ymax, ymin = datapoints$ymin,
+      tpars = tpar() # https://github.com/grantmcdermott/tinyplot/issues/474
+    ),
+    getNamespace("tinyplot")
   )
   list2env(facet_window_args, environment())
 
 
   #
-  ## Interior plot elements
+  ## split and draw datapoints -----
   #
 
   # Finally, we can draw all of the plot elements (points, lines, etc.)
   # We'll do this via a nested loops:
   #  1) Outer loop over facets
   #  2) Inner loop over groups
+  if (!is.null(datapoints$facet)) {
+    split_data = split(datapoints, datapoints$facet)
+    split_data = lapply(split_data, as.list)
+  } else {
+    split_data = list(as.list(datapoints))
+  }
 
   ## Outer loop over the facets
   for (i in seq_along(split_data)) {
     # Split group-level data again to grab any "by" groups
     idata = split_data[[i]]
     iby = idata[["by"]]
-    if (!is.null(by)) { ## maybe all(iby=="")
+    if (!null_by) { ## maybe all(iby=="")
       if (isTRUE(by_continuous)) {
         idata[["col"]] = col[round(rescale_num(idata$by, from = range(datapoints$by), to = c(1, 100)))]
         idata[["bg"]] = bg[round(rescale_num(idata$by, from = range(datapoints$by), to = c(1, 100)))]
@@ -1190,6 +1168,7 @@ tinyplot.default = function(
       ipch = pch[ii]
       ilty = lty[ii]
       ilwd = lwd[ii]
+      icex = if (bubble) idata[[ii]][["cex"]] else cex[[ii]]
       
       ix = idata[[ii]][["x"]]
       iy = idata[[ii]][["y"]]
@@ -1243,25 +1222,50 @@ tinyplot.default = function(
           iymin = iymin,
           ilabels = ilabels,
           iz = iz,
-          cex = cex,
+          # cex = cex,
+          icex = icex,
           dots = dots,
           type = type,
           x_by = x_by,
+          by_continuous = by_continuous,
           iby = ii,
           ifacet = i,
           facet_by = facet_by,
           data_facet = idata,
           ngrps = ngrps,
+          nfacets = nfacets,
           flip = flip,
           type_info = type_info,
-          facet_window_args = facet_window_args)
+          facet_window_args = facet_window_args
+        )
       }
     }
   }
+  
 
-  # save end pars for possible recall later
-  apar = par(no.readonly = TRUE)
-  set_saved_par(when = "after", apar)
+  #
+  ## save end pars for possible recall later -----
+  #
+
+  if (!add) {
+    # Capture device and usr before recordGraphics (in current plot context)
+    current_dev = dev.cur()
+    current_usr = if (isTRUE(settings$flip)) par("usr")[c(3,4,1,2)] else par("usr")
+    
+    # Store usr and dev for validating layer alignment
+    assign("usr_orig", current_usr, envir = get(".tinyplot_env", envir = parent.env(environment())))
+    assign("dev_orig", current_dev, envir = get(".tinyplot_env", envir = parent.env(environment())))
+    
+    recordGraphics(
+      {
+        apar = par(no.readonly = TRUE)
+        set_saved_par(when = "after", apar)
+      },
+      list = list(), 
+      env = getNamespace('tinyplot')
+    )
+  }
+
 }
 
 
@@ -1277,6 +1281,10 @@ tinyplot.formula = function(
     facet.args = NULL,
     weights = NULL,
     type = NULL,
+    xmin = NULL,
+    xmax = NULL,
+    ymin = NULL,
+    ymax = NULL,
     xlim = NULL,
     ylim = NULL,
     # log = "",
@@ -1315,29 +1323,43 @@ tinyplot.formula = function(
   ## placeholder for legend title
   legend_args = list(x = NULL)
 
+  ## turn facet into a formula if it does not evaluate successfully
+  if (inherits(try(facet, silent = TRUE), "try-error")) {
+    facet = as.formula(paste("~", deparse(substitute(facet))))
+    environment(facet) = environment(formula)
+  }
+
   ## process all formulas
   tf = tinyformula(formula, facet, weights)
 
   ## set up model frame
   m = match.call(expand.dots = FALSE)
-  m = m[c(1L, match(c("formula", "data", "subset", "na.action", "drop.unused.levels"), names(m), 0L))]
+  m = m[c(1L, match(c("formula", "data", "subset", "na.action", "drop.unused.levels", "xmin", "xmax", "ymin", "ymax"), names(m), 0L))]
   m$formula = tf$full
   ## need stats:: for non-standard evaluation
   m[[1L]] = quote(stats::model.frame)
   mf = eval.parent(m)
 
-  ## extract x
+  ## extract x (if any)
   x = tinyframe(tf$x, mf)
-  xnam = names(x)[[1L]]
-  if (length(names(x)) != 1L) warning(paste("formula should specify exactly one x-variable, using:", xnam))
-  x = x[[xnam]]
+  if (!is.null(x)) {
+    xnam = names(x)[[1L]]
+    if (length(names(x)) > 1L) warning(paste("formula should specify at most one x-variable, using:", xnam),
+    "\nif you want to use arithmetic operators, make sure to wrap them inside I()")
+    x = x[[xnam]]
+  } else {
+    xnam = NULL
+  }
 
   ## extract y (if any)
   y = tinyframe(tf$y, mf)
   if (!is.null(y)) {
     ynam = names(y)[[1L]]
-    if (length(names(y)) > 1L) warning(paste("formula should specify at most one y-variable, using:", ynam))
+    if (length(names(y)) > 1L) warning(paste("formula should specify at most one y-variable, using:", ynam),
+    "\nif you want to use arithmetic operators, make sure to wrap them inside I()")
     y = y[[ynam]]
+  } else {
+    ynam = NULL
   }
 
   ## extract weights (if any)
@@ -1371,17 +1393,37 @@ tinyplot.formula = function(
   }
 
   ## nice axis and legend labels
-  dens_type = (is.atomic(type) && identical(type, "density")) || (!is.atomic(type) && identical(type$name, "density"))
-  hist_type = (is.atomic(type) && type %in% c("hist", "histogram")) || (!is.atomic(type) && identical(type$name, "histogram"))
-  if (!is.null(type) && dens_type) {
+  dens_type = !is.null(type) && (is.atomic(type) && identical(type, "density")) || (!is.atomic(type) && identical(type$name, "density"))
+  hist_type = !is.null(type) && (is.atomic(type) && type %in% c("hist", "histogram")) || (!is.atomic(type) && identical(type$name, "histogram"))
+  barp_type = !is.null(type) &&  (is.atomic(type) && identical(type, "barplot")) || (!is.atomic(type) && identical(type$name, "barplot"))
+  if (is.null(x) && is.null(y)) {
+    # Exception: both x and y NULL (e.g., ~ 0 with type = "segments").
+    # Build labels from xmin/xmax/ymin/ymax names in the original call (m),
+    # since deparse(substitute()) in the default method would see mf[["..."]].
+    if (is.null(xlab) && !is.null(m[["xmin"]]) && !is.null(m[["xmax"]])) {
+      xlab = sprintf("[%s, %s]", deparse1(m[["xmin"]]), deparse1(m[["xmax"]]))
+    }
+    if (is.null(ylab) && !is.null(m[["ymin"]]) && !is.null(m[["ymax"]])) {
+      ylab = sprintf("[%s, %s]", deparse1(m[["ymin"]]), deparse1(m[["ymax"]]))
+    }
+  } else if (is.null(x) && !is.null(y)) {
+    # Exception: univariate y ~ 1 formulas. sanitize_type() will swap x/y and
+    # infer the type (histogram or barplot). Set xlab from the variable name
+    # and let sanitize_xylab() determine ylab after the type is known.
+    if (is.null(xlab)) xlab = ynam
+  } else if (dens_type) {
     # if (is.null(ylab)) ylab = "Density" ## rather assign ylab as part of internal type_density() logic
     if (is.null(xlab)) xlab = xnam
-  } else if (!is.null(type) && hist_type) {
+  } else if (hist_type) {
     # if (is.null(ylab)) ylab = "Frequency" ## rather assign ylab as part of internal type_histogram() logic
     if (is.null(xlab)) xlab = xnam
   } else if (is.null(y)) {
-    if (is.null(ylab)) ylab = xnam
-    if (is.null(xlab)) xlab = "Index"
+    if (is.factor(x) || is.character(x) || barp_type) {
+      if (is.null(xlab)) xlab = xnam
+    } else {
+      if (is.null(ylab)) ylab = xnam
+      if (is.null(xlab)) xlab = "Index"
+    }
   } else {
     if (is.null(ylab)) ylab = ynam
     if (is.null(xlab)) xlab = xnam
@@ -1396,6 +1438,10 @@ tinyplot.formula = function(
     data = data,
     weights = wgts,
     type = type,
+    xmin = mf[["(xmin)"]],
+    xmax = mf[["(xmax)"]],
+    ymin = mf[["(ymin)"]],
+    ymax = mf[["(ymax)"]],
     xlim = xlim,
     ylim = ylim,
     # log = "",

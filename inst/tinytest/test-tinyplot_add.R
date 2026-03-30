@@ -49,7 +49,72 @@ expect_snapshot_plot(f, label = "tinyplot_add_rug")
 
 # type = "rug" (adding to "density" should default to x variable)
 f = function() {
-  tinyplot( ~ eruptions, data = faithful, type = "density")
+  tinyplot(~eruptions, data = faithful, type = "density")
   tinyplot_add(type = "rug")
 }
 expect_snapshot_plot(f, label = "tinyplot_add_rug_density")
+
+
+# type = "rug" (adding to "density" should default to x variable)
+f = function() {
+  tinyplot(~eruptions, data = faithful, type = "density")
+  tinyplot_add(type = "rug")
+}
+expect_snapshot_plot(f, label = "tinyplot_add_rug_density")
+
+
+# use tinyplot_add() inside a custom function with local variables
+tinyplot_lollipop = function(x, y) {
+  tinyplot(x, y, type = "h")
+  tinyplot_add(type = "p", pch = 19)
+  tinyplot_add(type = "hline")
+}
+f = function() {
+  tinyplot_lollipop(1:5, sin(1:5))
+}
+expect_snapshot_plot(f, label = "tinyplot_lollipop")
+
+
+# use tinyplot_add() after do.call(tinyplot)
+f = function() {
+  d = data.frame(x = 1:5, y = sin(1:5))
+  do.call(tinyplot, list(y ~ x, data = d))
+  do.call(tinyplot_add, list(type = "h"))
+}
+expect_snapshot_plot(f, label = "tinyplot_do_call")
+
+
+# check that we are avoiding recursive margins for facets, by properly restoring
+# the original state
+f = function() {
+  tinyplot(Sepal.Length ~ Petal.Length, facet = ~Species, data = iris)
+  tinyplot_add(type = "lm")
+  tinyplot(Sepal.Width ~ Sepal.Length, facet = ~Species, data = iris)
+  tinyplot_add(type = "lm")
+}
+expect_snapshot_plot(f, label = "tinyplot_add_no_recursive_margins")
+
+
+# jitter layer on top of violin (#559)
+f = function() {
+  set.seed(42)
+  tinyplot(Sepal.Length ~ Species, data = iris, type = "violin")
+  tinyplot_add(type = "jitter", cex = 0.5, alpha = 0.3)
+}
+expect_snapshot_plot(f, label = "tinyplot_add_jitter_on_violin")
+
+# jitter layer on top of grouped boxplot (#493)
+f = function() {
+  set.seed(42)
+  tinyplot(len ~ dose | supp, data = ToothGrowth, type = "boxplot")
+  tinyplot_add(type = "jitter", cex = 0.5, alpha = 0.3)
+}
+expect_snapshot_plot(f, label = "tinyplot_add_jitter_on_grouped_boxplot")
+
+# jitter layer on top of grouped violin (#493)
+f = function() {
+  set.seed(42)
+  tinyplot(len ~ dose | supp, data = ToothGrowth, type = "violin", bg = 0.2)
+  tinyplot_add(type = "jitter", cex = 0.5, alpha = 0.3)
+}
+expect_snapshot_plot(f, label = "tinyplot_add_jitter_on_grouped_violin")

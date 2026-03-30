@@ -4,7 +4,33 @@
 \alias{type_points}
 \title{Points plot type}
 \usage{
-type_points()
+type_points(clim = c(0.5, 2.5), dodge = 0, fixed.dodge = FALSE)
+}
+\arguments{
+\item{clim}{Numeric giving the lower and upper limits of the character
+expansion (\code{cex}) normalization for bubble charts.}
+
+\item{dodge}{Adjustment parameter for dodging overlapping points or ranges in
+grouped plots along the x-axis (or y-axis for flipped plots). Either:
+\itemize{
+\item numeric value in the range \verb{[0,1)}. Note that values are scaled
+relative to the spacing of x-axis breaks, e.g. \code{dodge = 0.1} places the
+outermost groups one-tenth of the way to adjacent breaks, \code{dodge = 0.5}
+places them midway between breaks, etc. Values < 0.5 are recommended.
+\item logical. If \code{TRUE}, the dodge width is calculated automatically based on
+the number of groups (0.1 per group for 2-4 groups, 0.45 for 5+ groups). If
+\code{FALSE} or 0, no dodging is performed.
+}
+
+Default value is 0 (no dodging). While we do not check, it is \emph{strongly}
+recommended that dodging only be used in cases where the x-axis comprises a
+limited number of discrete breaks.}
+
+\item{fixed.dodge}{Logical. If \code{FALSE} (default), dodge positions are
+calculated independently for each \code{x} value, based only on the groups
+present at that position. If \code{TRUE}, dodge positions are based on all
+groups, ensuring "fixed" spacing across x-axis breaks (i.e., even if some
+groups are missing for a particular \code{x} value).}
 }
 \description{
 Type function for plotting points, i.e. a scatter plot.
@@ -25,5 +51,14 @@ tinyplot(Sepal.Length ~ Petal.Length | Species, data = iris)
 
 # Continuous grouping (with gradient legend)
 tinyplot(Sepal.Length ~ Petal.Length | Sepal.Width, data = iris, pch = 19)
+
+# Bubble chart version
+tinyplot(Sepal.Length ~ Petal.Length, data = iris, cex = iris$Sepal.Width)
+
+# Fancier version with dual legends and extra customization
+tinyplot(Sepal.Length ~ Petal.Length | Species,
+  data = iris,
+  cex = iris$Sepal.Width, clim = c(1, 5),
+  pch = 21, fill = 0.3)
 
 }

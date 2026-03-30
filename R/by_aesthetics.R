@@ -1,325 +1,336 @@
-by_col = function(ngrps = 1L, col = NULL, palette = NULL, gradient = NULL, ordered = NULL, alpha = NULL) {
-  if (is.null(ordered)) ordered = FALSE
-  if (is.null(alpha)) alpha = 1
-  if (is.null(gradient)) gradient = FALSE
-  if (isTRUE(gradient)) {
-    ngrps = 100L
-  }
+#
+## orchestration function -----
+#
 
-  if (is.null(palette)) {
-    pal_qual = get_tpar("palette.qualitative", default = NULL)
-    if (ngrps <= max(c(length(pal_qual), 8))) {
-      palette = pal_qual
-    } else {
-      palette = get_tpar("palette.sequential", default = NULL)
-    }
-  }
-
-  # palette = substitute(palette, env = parent.env(environment()))
-
-  # special "by" convenience keyword (will treat as NULL & handle grouping below)
-  if (!anyNA(col) && !is.null(col) && length(col) == 1 && col == "by") col = NULL
-
-  if (is.null(col) && is.null(palette)) {
-    col = seq_len(ngrps)
-  }
-
-  if (is.atomic(col) && is.vector(col)) {
-    if (length(col) == 1) {
-      col = rep(col, ngrps)
-    } else if (length(col) != ngrps) {
-      if (isFALSE(gradient)) {
-        stop(sprintf("`col` must be of length 1 or %s.", ngrps), call. = FALSE)
-      } else {
-        # interpolate gradient colors
-        col = colorRampPalette(colors = col, alpha = TRUE)(ngrps)
-      }
-    }
-    if (isTRUE(gradient)) {
-      col = rev(col)
-    } else if (!ordered && is.numeric(col)) {
-      col = palette()[col]
-    }
-    if (anyNA(col) || is.character(col)) {
-      if (alpha) col = adjustcolor(col, alpha.f = alpha)
-      return(col)
-    }
-  }
-
-  if (is.null(palette)) {
-    if (ngrps <= length(palette()) && isFALSE(ordered) && isFALSE(gradient)) {
-      palette_fun = function(alpha) adjustcolor(palette(), alpha) # must be function to avoid arg ambiguity
-      args = list(alpha = alpha)
-    } else {
-      if (ngrps <= 8 && isFALSE(ordered)) { # ngrps < 100 so we know gradient is FALSE too
-        palette = "R4"
-        palette_fun = palette.colors
-      } else {
-        palette = "Viridis"
-        if (isFALSE(gradient) && isFALSE(ordered)) {
-          palette_fun = hcl.colors
-        } else {
-          palette_fun_gradient = function(n, palette, from = 0.1, to = 0.9, alpha = 1) {
-            colorRampPalette(
-              hcl.colors(n = 100, palette = palette, alpha = alpha)[(100 * from + 1):(100 * to)],
-              alpha = TRUE
-            )(n)
-          }
-          palette_fun = palette_fun_gradient
-        }
-      }
-      args = list(n = ngrps, palette = palette, alpha = alpha)
-    }
-  } else {
-    if (is.character(palette)) {
-      # special case: if vector of character strings, we assume that the user
-      # must have passed a vector of colours (e.g., c("red", "blue")) rather
-      # than a known/named colour palette (e.g. "Harmonic")
-      if (length(palette) > 1) {
-        palette_fun = "c"
-        if (!is.null(alpha)) palette = adjustcolor(palette, alpha.f = alpha)
-        args = as.list(palette)
-        if (length(args) < ngrps && length(args) != 1) {
-          # if manual colours < ngrps, either (1) interpolate for gradient
-          # colors, or (2) recycle for discrete colours
-          if (gradient) {
-            args = list(colorRampPalette(args, alpha = TRUE)(ngrps))
-          } else {
-            ncolsstr = paste0("(", length(args), ")")
-            ngrpsstr = paste0("(", ngrps, ")")
-            warning(
-              "\nFewer colours ", ncolsstr, " provided than than there are groups ",
-              ngrpsstr, ". Recycling to make up the shortfall."
-            )
-            args = rep(args, length.out = ngrps)
-          }
-        }
-      } else {
-        fx = function(x) tolower(gsub("[-, _, \\,, (, ), \\ , \\.]", "", x))
-        pal_match = charmatch(fx(palette), fx(palette.pals()))
-        if (!is.na(pal_match)) {
-          if (pal_match < 1L) stop("'palette' is ambiguous")
-          palette_fun = palette.colors
-          if (isTRUE(gradient)) {
-            palette_fun2 = function(n, palette, alpha) colorRampPalette(palette.colors(palette = palette, alpha = alpha))(n)
-            palette_fun = palette_fun2
-          }
-        } else {
-          pal_match = charmatch(fx(palette), fx(hcl.pals()))
-          if (!is.na(pal_match)) {
-            if (pal_match < 1L) stop("'palette' is ambiguous")
-            palette_fun = hcl.colors
-          } else {
-            stop(
-              "\nPalette string not recogized. Must be a value produced by either",
-              "`palette.pals()` or `hcl.pals()`.\n",
-              call. = FALSE
-            )
-          }
-        }
-        args = list(n = ngrps, palette = palette, alpha = alpha)
-      }
-    } else if (class(palette) %in% c("call", "name")) {
-      args = as.list(palette)
-      palette_fun = paste(args[[1]])
-      args[[1]] = NULL
-      # catch for direct vector or list
-      if (palette_fun %in% c("c", "list")) {
-        if (palette_fun == "list") palette_fun = "c"
-        if (!is.null(alpha)) args = lapply(args, function(a) adjustcolor(a, alpha.f = alpha))
-        if (length(args) < ngrps && length(args) != 1) {
-          # if manual colours < ngrps, either (1) interpolate for gradient
-          # colors, or (2) recycle for discrete colours
-          if (gradient) {
-            args = list(colorRampPalette(args, alpha = TRUE)(ngrps))
-          } else {
-            ncolsstr = paste0("(", length(args), ")")
-            ngrpsstr = paste0("(", ngrps, ")")
-            warning(
-              "\nFewer colours ", ncolsstr, " provided than than there are groups ",
-              ngrpsstr, ". Recycling to make up the shortfall."
-            )
-            args = rep(args, length.out = ngrps)
-          }
-        }
-      } else {
-        args[["n"]] = ngrps
-        # remove unnamed arguments to prevent unintentional argument sliding
-        if (any(names(args) == "")) args[[which(names(args) == "")]] = NULL
-      }
-    } else if (inherits(palette, "function")) {
-      args = list()
-      palette_fun = palette
-    } else {
-      stop(
-        "\nInvalid palette argument. Must be a recognized keyword, or a ",
-        "palette-generating function with named arguments.\n"
-      )
-    }
-  }
-
-  cols = tryCatch(
-    do.call(palette_fun, args),
-    error = function(e) do.call(eval(palette), args) # catch for bespoke palette generating funcs
+by_aesthetics = function(settings) {
+  env2env(
+    settings,
+    environment(),
+    c(
+      "datapoints", "by", "type", "null_by", "pch", "bg", "lty", "lwd",
+      "bubble", "cex", "alpha", "col", "fill", "ribbon.alpha"
+    )
   )
 
-  if (length(cols) > ngrps) cols = cols[1:ngrps]
+  # Detect grouping characteristics
+  by_ordered = FALSE
+  by_continuous = !null_by && inherits(datapoints$by, c("numeric", "integer"))
+  if (isTRUE(by_continuous) && type %in% c("l", "b", "o", "ribbon", "polygon", "polypath", "boxplot")) {
+    warning("\nContinuous legends not supported for this plot type. Reverting to discrete legend.")
+    by_continuous = FALSE
+  } else if (!null_by) {
+    by_ordered = is.ordered(by)
+  }
 
-  # For gradient and ordered colors, we'll run high to low
-  if (isTRUE(gradient) || isTRUE(ordered)) cols = rev(cols)
+  ngrps = if (null_by) {
+    1L
+  } else if (is.factor(by)) {
+    nlevels(by)
+  } else if (by_continuous) {
+    100L
+  } else {
+    length(unique(by))
+  }
 
-  return(cols)
+  pch = by_pch(ngrps = ngrps, type = type, pch = pch)
+  lty = by_lty(ngrps = ngrps, type = type, lty = lty)
+  lwd = by_lwd(ngrps = ngrps, type = type, lwd = lwd)
+  cex = by_cex(ngrps = ngrps, type = type, bubble = bubble, cex = cex)
+
+  col = by_col(
+    col = col,
+    palette = settings$palette, # must use unevaluated palette
+    alpha = alpha,
+    by_ordered = by_ordered,
+    by_continuous = by_continuous,
+    ngrps = ngrps,
+    adjustcolor = adjustcolor
+  )
+
+  bg = by_bg(
+    bg = bg,
+    fill = fill,
+    col = col,
+    palette = settings$palette, # must use unevaluated palette
+    alpha = alpha,
+    by_ordered = by_ordered,
+    by_continuous = by_continuous,
+    ngrps = ngrps,
+    type = type,
+    by = by,
+    ribbon.alpha = ribbon.alpha,
+    adjustcolor = adjustcolor
+  )
+
+  # update settings
+  env2env(
+    environment(),
+    settings,
+    c("by_continuous", "by_ordered", "ngrps", "pch", "lty", "lwd", "cex", "col", "bg")
+  )
 }
 
 
-by_pch = function(ngrps, type, pch = NULL) {
-  no_pch = FALSE
-  if (identical(type, "text")) {
-    pch <- rep(15, ngrps)
-  } else if (!type %in% c("p", "b", "o", "pointrange", "errorbar", "boxplot", "qq")) {
-    no_pch = TRUE
-    pch = NULL
+#
+## helper functions -----
+#
 
-    # special "by" convenience keyword
-  } else if (!is.null(pch) && length(pch) == 1 && pch == "by") {
-    no_pch = TRUE # skip checks below
-    pch = 1:ngrps + par("pch") - 1
-    # correctly recycle if over max pch type
-    pch_ceiling = 25 # see ?pch
-    if (max(pch) > pch_ceiling) {
-      pch_below = pch[pch <= pch_ceiling]
-      pch_above = pch[pch > pch_ceiling]
-      pch_above = rep_len(0:pch_ceiling, length(pch_above))
-      pch = c(pch_below, pch_above)
-    }
 
-    # return NULL if not a valid point type
-  } else if (is.null(pch)) {
-    pch = par("pch")
+apply_alpha = function(cols, alpha, adjustcolor) {
+  if (is.null(cols) || is.null(alpha) || identical(alpha, 0)) {
+    return(cols)
   }
-
-  if (!no_pch) {
-    if (!is.atomic(pch) || !is.vector(pch) || !is.numeric(pch) || (length(pch) != 1 && length(pch) != ngrps)) {
-      stop(sprintf("`pch` must be `NULL` or a numeric vector of length 1 or %s.", ngrps), call. = FALSE)
-    }
-
-    if (length(pch) == 1) {
-      pch = rep(pch, ngrps)
-    }
-  }
-
-  return(pch)
+  adjustcolor(cols, alpha.f = alpha)
 }
 
+is_by_keyword = function(x) {
+  is.character(x) && length(x) == 1 && !is.na(x) && identical(x, "by")
+}
 
-by_lty = function(ngrps, type, lty = NULL) {
-  # We only care about line types, otherwise return NULL
-  if (!type %in% c("l", "b", "o", "c", "h", "s", "S", "ribbon", "boxplot", "rect", "segments", "qq", "abline", "hline", "vline")) {
-    out = NULL
+warn_recycle_colors = function(ncols, ngrps) {
+  warning(
+    "\nFewer colours (", ncols, ") provided than there are groups (",
+    ngrps, "). Recycling to make up the shortfall."
+  )
+}
 
-    # special "by" convenience keyword
-  } else if (!is.null(lty) && length(lty) == 1 && lty == "by") {
-    lty_dict = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
-    par_lty = par("lty")
+expand_colors_to_ngrps = function(values, ngrps, gradient) {
+  if (length(values) == 1) {
+    return(rep(values, ngrps))
+  }
+  if (length(values) >= ngrps) {
+    return(values[seq_len(ngrps)])
+  }
+  if (gradient) {
+    return(colorRampPalette(colors = values, alpha = TRUE)(ngrps))
+  }
+  warn_recycle_colors(length(values), ngrps)
+  rep_len(values, ngrps)
+}
 
-    if (!par_lty %in% lty_dict) {
-      warning(
-        "\nBesoke lty specifications (i.e., using string combinations) are not",
-        "currently supported alongside the lty='by' keyword argument.",
-        "Defaulting to 1 and looping from there.\n"
-      )
-      par_lty = 1
+assert_len_1_or_ngrps = function(x, ngrps, name, allow_character = FALSE) {
+  types = if (allow_character) "numeric or character" else "numeric"
+  valid_type = is.numeric(x) || (allow_character && is.character(x))
+  valid = is.atomic(x) && is.vector(x) && valid_type && (length(x) == 1 || length(x) == ngrps)
+  if (!valid) {
+    stop(sprintf("`%s` must be `NULL`, or a %s vector of length 1 or %s.", name, types, ngrps), call. = FALSE)
+  }
+}
+
+match_palette_name = function(name, candidates) {
+  normalize = function(x) tolower(gsub("[-, _, \\,, (, ), \\ , \\.]", "", x))
+  charmatch(normalize(name), normalize(candidates))
+}
+
+## Handle direct color input via `col` arg. Returns colors or NULL if not applicable.
+resolve_manual_colors = function(col, ngrps, gradient, ordered, alpha, adjustcolor) {
+  if (is.null(col) || !is.atomic(col) || !is.vector(col)) {
+    return(NULL)
+  }
+
+  cols = col
+  if (length(cols) == 1) {
+    cols = rep(cols, ngrps)
+  } else if (length(cols) < ngrps) {
+    cols = expand_colors_to_ngrps(cols, ngrps, gradient)
+  }
+
+  # Map numeric indices to palette colors (unless ordered)
+  if (!ordered && is.numeric(cols)) {
+    base_pal = palette()
+    cols = if (ngrps <= length(base_pal)) {
+      base_pal[cols]
     } else {
-      par_lty = which(par_lty == lty_dict)
+      hcl.colors(max(cols))[cols]
     }
-    out = 1:ngrps + par_lty - 1
-    # correctly recycle if over max pch type
-    lty_ceiling = 6 # see ?pch
-    if (max(out) > lty_ceiling) {
-      lty_below = out[out <= lty_ceiling]
-      lty_above = out[out > lty_ceiling]
-      lty_above = rep_len(1:lty_ceiling, length(lty_above))
-      out = c(lty_below, lty_above)
-    }
+  }
 
-    # NULL -> solid (or default) line
-  } else if (is.null(lty)) {
-    if (identical(type, "boxplot")) {
-      out = NULL
-    } else {
-      out = rep(par("lty"), ngrps)
-    }
+  if (gradient) cols = rev(cols)
+  apply_alpha(cols, alpha, adjustcolor)
+}
 
-    # atomic vector: sanity check length
-  } else if (is.atomic(lty) && is.vector(lty)) {
-    if (length(lty) == 1) {
-      out = rep(lty, ngrps)
-    } else {
-      if (length(lty) != ngrps) {
-        stop(sprintf("`lty` must be `NULL` or a numeric vector of length 1 or %s.", ngrps), call. = FALSE)
+## High-level palette resolution: theme fallback, defaults, then delegate to resolve_palette_spec.
+resolve_palette_colors = function(palette, theme_palette, ngrps, ordered, gradient, alpha, adjustcolor) {
+  palette_choice = palette
+
+  # Pick theme palette if no explicit palette provided
+  if (is.null(palette_choice) && !is.null(theme_palette)) {
+    palette_choice = theme_palette
+    if (length(theme_palette) == 1) {
+      # Check if theme palette needs to switch to sequential
+      use_sequential = FALSE
+      idx = match_palette_name(theme_palette, palette.pals())
+      if (!is.na(idx) && idx >= 1L) {
+        max_colors = length(palette.colors(palette = palette.pals()[idx]))
+        use_sequential = ngrps >= max_colors || ordered
+      } else {
+        idx = match_palette_name(theme_palette, hcl.pals())
+        use_sequential = !is.na(idx) && idx >= 1L && gradient
       }
-      out = lty
+      if (use_sequential) {
+        palette_choice = get_tpar("palette.sequential", default = NULL)
+      }
     }
   }
 
-  return(out)
+  if (is.null(palette_choice)) {
+    # Default palette selection (alpha applied at end)
+    base_pal = palette()
+    if (ngrps <= length(base_pal) && !ordered && !gradient) {
+      cols = base_pal[seq_len(ngrps)]
+    } else if (ngrps <= 8 && !ordered) {
+      cols = palette.colors(n = ngrps, palette = "R4")
+    } else if (!gradient && !ordered) {
+      cols = hcl.colors(n = ngrps, palette = "Viridis")
+    } else {
+      # Restricted viridis for gradient/ordered (excludes extreme ends)
+      cols = colorRampPalette(
+        hcl.colors(n = 100, palette = "Viridis")[11:90],
+        alpha = TRUE
+      )(ngrps)
+    }
+    cols = apply_alpha(cols, alpha, adjustcolor)
+  } else {
+    cols = resolve_palette_spec(
+      palette = palette_choice,
+      ngrps = ngrps,
+      gradient = gradient,
+      ordered = ordered,
+      alpha = alpha,
+      adjustcolor = adjustcolor
+    )
+  }
+
+  if (gradient || ordered) cols = rev(cols)
+  cols
+}
+
+## Parse palette arg (vector, string, call, or function) into colors.
+resolve_palette_spec = function(palette, ngrps, gradient, ordered, alpha, adjustcolor) {
+  cols = NULL
+  if (is.character(palette) && length(palette) > 1) {
+    # Direct color vector
+    cols = palette
+  } else if (is.character(palette)) {
+    # Named palette string - try palette.pals() then hcl.pals()
+    discrete_pals = palette.pals()
+    idx = match_palette_name(palette, discrete_pals)
+
+    if (!is.na(idx)) {
+      if (idx < 1L) stop("'palette' is ambiguous")
+      matched_name = discrete_pals[idx]
+      max_colors = length(palette.colors(palette = matched_name))
+
+      if (gradient) {
+        cols = colorRampPalette(palette.colors(palette = matched_name))(ngrps)
+      } else if (ngrps >= max_colors) {
+        warn_recycle_colors(max_colors, ngrps)
+        cols = palette.colors(n = ngrps, palette = matched_name, recycle = TRUE)
+      } else {
+        cols = palette.colors(n = ngrps, palette = matched_name)
+      }
+    } else {
+      hcl_pals = hcl.pals()
+      idx = match_palette_name(palette, hcl_pals)
+      if (!is.na(idx)) {
+        if (idx < 1L) stop("'palette' is ambiguous")
+        cols = hcl.colors(n = ngrps, palette = palette)
+      } else {
+        stop(
+          "\nPalette string not recognized. Must be a value produced by either ",
+          "`palette.pals()` or `hcl.pals()`.\n",
+          call. = FALSE
+        )
+      }
+    }
+  } else if (inherits(palette, c("call", "name"))) {
+    # Expression or symbol
+    if (inherits(palette, "name")) {
+      eval_palette = tryCatch(eval(palette), error = function(e) NULL)
+      if (is.character(eval_palette)) {
+        cols = eval_palette
+      }
+    }
+    if (is.null(cols)) {
+      args = as.list(palette)
+      fun_name = paste(args[[1]])
+      args[[1]] = NULL
+      if (fun_name %in% c("c", "list")) {
+        cols = unlist(args, recursive = TRUE, use.names = FALSE)
+      } else {
+        args[["n"]] = ngrps
+        if (any(names(args) == "")) args[which(names(args) == "")] = NULL
+        cols = tryCatch(
+          do.call(fun_name, args),
+          error = function(e) do.call(eval(palette), args)
+        )
+      }
+    }
+  } else if (inherits(palette, "function")) {
+    cols = palette(ngrps)
+  } else {
+    stop(
+      "\nInvalid palette argument. Must be a recognized keyword, or a ",
+      "palette-generating function with named arguments.\n"
+    )
+  }
+
+  # Uniform post-processing
+  cols = expand_colors_to_ngrps(cols, ngrps, gradient)
+  apply_alpha(cols, alpha, adjustcolor)
 }
 
 
-by_lwd = function(ngrps, type, lwd = NULL) {
-  lwd_base = par("lwd")
-  lwd_floor = lwd_base / min(5, max((ngrps - 1), 1))
-  lwd_ceiling = lwd_base * min(5, ngrps)
+#
+## subsidiary functions -----
+#
 
-  no_lwd = FALSE
-  # special "by" convenience keyword
-  if (!is.null(lwd) && length(lwd) == 1 && lwd == "by") {
-    no_lwd = TRUE # skip checks below
-    lwd = seq(lwd_floor, lwd_ceiling, length.out = ngrps)
-  } else if (is.null(lwd)) {
-    no_lwd = TRUE
-    lwd = NULL
+by_col = function(col, palette, alpha, by_ordered, by_continuous, ngrps, adjustcolor) {
+  ordered = if (is.null(by_ordered)) FALSE else by_ordered
+  gradient = if (is.null(by_continuous)) FALSE else by_continuous
+  assert_logical(ordered)
+  assert_logical(gradient)
+
+  if (is.null(alpha)) alpha = 1
+  if (gradient) ngrps = 100L
+
+  if (is_by_keyword(col)) col = NULL
+
+  cols = resolve_manual_colors(col, ngrps, gradient, ordered, alpha, adjustcolor)
+  if (!is.null(cols)) {
+    return(cols)
   }
 
-  if (!no_lwd) {
-    if (!is.atomic(lwd) || !is.vector(lwd) || !is.numeric(lwd) || (length(lwd) != 1 && length(lwd) != ngrps)) {
-      stop(sprintf("`lwd` must be `NULL` or a numeric vector of length 1 or %s.", ngrps), call. = FALSE)
-    }
-    if (length(lwd) == 1) {
-      lwd = rep(lwd, ngrps)
-    }
-  }
+  pal_theme = get_tpar("palette.qualitative", default = NULL)
+  cols = resolve_palette_colors(
+    palette = palette,
+    theme_palette = pal_theme,
+    ngrps = ngrps,
+    ordered = ordered,
+    gradient = gradient,
+    alpha = alpha,
+    adjustcolor = adjustcolor
+  )
 
-  return(lwd)
+  cols
 }
 
 
-by_bg = function(
-    adjustcolor,
-    alpha,
-    bg,
-    by,
-    by_continuous,
-    by_ordered,
-    col,
-    fill,
-    ngrps,
-    palette,
-    ribbon.alpha,
-    type) {
+by_bg = function(bg, fill, col, palette, alpha, by_ordered, by_continuous, ngrps, type, by, ribbon.alpha, adjustcolor) {
   if (is.null(bg) && !is.null(fill)) bg = fill
   if (!is.null(bg) && length(bg) == 1 && is.numeric(bg) && bg >= 0 && bg <= 1) {
     alpha = bg
     bg = "by"
   }
-  if (!is.null(bg) && length(bg) == 1 && bg == "by") {
-    bg = by_col(
-      ngrps = ngrps,
-      col = NULL,
+  if (!is.null(bg) && length(bg) == 1 && is_by_keyword(bg)) {
+    bg = resolve_palette_colors(
       palette = palette,
-      gradient = by_continuous,
-      ordered = by_ordered,
-      alpha = alpha
+      theme_palette = get_tpar("palette.qualitative", default = NULL),
+      ngrps = ngrps,
+      ordered = if (is.null(by_ordered)) FALSE else by_ordered,
+      gradient = if (is.null(by_continuous)) FALSE else by_continuous,
+      alpha = if (is.null(alpha)) 1 else alpha,
+      adjustcolor = adjustcolor
     )
   } else if (length(bg) != ngrps) {
     bg = rep(bg, ngrps)
@@ -332,5 +343,135 @@ by_bg = function(
     }
   }
 
-  return(bg)
+  bg
+}
+
+
+by_pch = function(ngrps, type, pch = NULL) {
+  no_pch = FALSE
+  if (identical(type, "text")) {
+    pch = rep(15, ngrps)
+  } else if (!type %in% c("p", "b", "o", "pointrange", "errorbar", "boxplot", "qq")) {
+    no_pch = TRUE
+    pch = NULL
+
+    # special "by" convenience keyword
+  } else if (is_by_keyword(pch)) {
+    no_pch = TRUE # skip checks below
+    pch = 1:ngrps + par("pch") - 1
+    # correctly recycle if over max pch type
+    if (max(pch) > 25L) {
+      pch_below = pch[pch <= 25L]
+      pch_above = pch[pch > 25L]
+      pch_above = rep_len(0:25, length(pch_above))
+      pch = c(pch_below, pch_above)
+    }
+
+    # return NULL if not a valid point type
+  } else if (is.null(pch)) {
+    pch = par("pch")
+  }
+
+  if (!no_pch) {
+    assert_len_1_or_ngrps(pch, ngrps, "pch", allow_character = TRUE)
+    if (length(pch) == 1) pch = rep(pch, ngrps)
+  }
+
+  return(pch)
+}
+
+
+by_lty = function(ngrps, type, lty = NULL) {
+  # We only care about line types, otherwise return NULL
+  if (!type %in% c("l", "b", "o", "c", "h", "s", "S", "ribbon", "barplot", "boxplot", "rect", "segments", "qq", "abline", "hline", "vline")) {
+    lty = NULL
+
+    # special "by" convenience keyword
+  } else if (is_by_keyword(lty)) {
+    lty_dict = c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
+    par_lty = par("lty")
+
+    if (!par_lty %in% lty_dict) {
+      warning(
+        "\nBespoke lty specifications (i.e., using string combinations) are not ",
+        "currently supported alongside the lty='by' keyword argument. ",
+        "Defaulting to 1 and looping from there.\n"
+      )
+      par_lty = 1
+    } else {
+      par_lty = which(par_lty == lty_dict)
+    }
+    lty = 1:ngrps + par_lty - 1
+    # correctly recycle if over max lty type
+    if (max(lty) > 6L) {
+      lty_below = lty[lty <= 6L]
+      lty_above = lty[lty > 6L]
+      lty_above = rep_len(1:6, length(lty_above))
+      lty = c(lty_below, lty_above)
+    }
+
+    # NULL -> solid (or default) line
+  } else if (is.null(lty)) {
+    if (!identical(type, "boxplot")) {
+      lty = rep(par("lty"), ngrps)
+    }
+
+    # atomic vector: sanity check length
+  } else if (is.atomic(lty) && is.vector(lty)) {
+    assert_len_1_or_ngrps(lty, ngrps, "lty")
+    if (length(lty) == 1) lty = rep(lty, ngrps)
+  }
+
+  lty
+}
+
+
+by_lwd = function(ngrps, type, lwd = NULL) {
+  lwd_base = par("lwd")
+  lwd_floor = lwd_base / min(5, max((ngrps - 1), 1))
+  lwd_ceiling = lwd_base * min(5, ngrps)
+
+  no_lwd = FALSE
+  # special "by" convenience keyword
+  if (is_by_keyword(lwd)) {
+    no_lwd = TRUE # skip checks below
+    lwd = seq(lwd_floor, lwd_ceiling, length.out = ngrps)
+  } else if (is.null(lwd)) {
+    no_lwd = TRUE
+    lwd = NULL
+  }
+
+  if (!no_lwd) {
+    assert_len_1_or_ngrps(lwd, ngrps, "lwd")
+    if (length(lwd) == 1) lwd = rep(lwd, ngrps)
+  }
+
+  return(lwd)
+}
+
+
+by_cex = function(ngrps, type, bubble = FALSE, cex = NULL) {
+  no_cex = FALSE
+  # special "by" convenience keyword
+  if (is_by_keyword(cex)) {
+    no_cex = TRUE # skip checks below
+    cex = rescale_num(c(1:ngrps), to = c(1, 2.5))
+  } else if (is.null(cex)) {
+    no_cex = TRUE
+    # cex = NULL
+    # can't leave cex as NULL otherwise JIT cex_fct_adj adjustment in
+    # draw_legend() won't work later
+    cex = 1
+    cex = rep(cex, ngrps)
+  }
+
+  # placehodler
+  if (bubble) no_cex = TRUE
+
+  if (!no_cex) {
+    assert_len_1_or_ngrps(cex, ngrps, "cex")
+    if (length(cex) == 1) cex = rep(cex, ngrps)
+  }
+
+  return(cex)
 }

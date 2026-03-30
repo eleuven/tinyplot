@@ -43,7 +43,7 @@ type_boxplot = function(
       boxwex = boxwex,
       staplewex = staplewex,
       outwex = outwex),
-    data = data_boxplot(),
+    data = data_boxplot(boxwex = boxwex),
     name = "boxplot"
   )
   class(out) = "tinyplot_type"
@@ -60,13 +60,9 @@ draw_boxplot = function(range, width, varwidth, notch, outline, boxwex, staplewe
 
         # Handle multiple groups
         if (ngrps > 1 && isFALSE(x_by) && isFALSE(facet_by)) {
-            boxwex_orig = boxwex
+            group_offsets = get_environment_variable(".group_offsets")
             boxwex = boxwex / ngrps - 0.01
-            at_ix = at_ix + seq(
-              -((boxwex_orig - boxwex) / 2),
-              ((boxwex_orig - boxwex) / 2),
-              length.out = ngrps
-            )[iby]
+            at_ix = at_ix + group_offsets[iby]
         }
 
         boxplot(
@@ -93,8 +89,9 @@ draw_boxplot = function(range, width, varwidth, notch, outline, boxwex, staplewe
 
 
 
-data_boxplot = function() {
-    fun = function(datapoints, bg, col, palette, ...) {
+data_boxplot = function(boxwex = 0.8) {
+    fun = function(settings, ...) {
+        env2env(settings, environment(), c("datapoints", "by", "facet", "null_facet", "null_palette", "x", "col", "bg", "null_by"))
         # Convert x to factor if it's not already
         datapoints$x = as.factor(datapoints$x)
 
@@ -103,10 +100,6 @@ data_boxplot = function() {
         xlabs = seq_along(xlvls)
         names(xlabs) = xlvls
         datapoints$x = as.integer(datapoints$x)
-
-        # Handle ordering based on by and facet variables
-        null_by = length(unique(datapoints$by)) == 1
-        null_facet = length(unique(datapoints$facet)) == 1
 
         if (null_by && null_facet) {
             xord = order(datapoints$x)
@@ -118,35 +111,59 @@ data_boxplot = function() {
             xord = order(datapoints$by, datapoints$facet, datapoints$x)
         }
 
-        if (length(unique(datapoints[["by"]])) == 1 && is.null(palette)) {
+        # Check if user provided palette before substitute)
+        if (length(unique(datapoints[["by"]])) == 1 && null_palette) {
             if (is.null(col)) col = par("fg")
             if (is.null(bg)) bg = "lightgray"
         } else {
-            bg = "by"
+            if (is.null(bg)) bg = "by"
         }
 
         # Reorder x, y, ymin, and ymax based on the order determined
         datapoints = datapoints[xord,]
 
         # Return the result as a list called 'out'
-        out = list(
-            x = datapoints$x,
-            y = datapoints$y,
-            ymin = datapoints$ymin,
-            ymax = datapoints$ymax,
-            xlabs = xlabs,
-            datapoints = datapoints,
-            col = col,
-            bg = bg)
+        x = datapoints$x
+        y = datapoints$y
+        ymin = datapoints$ymin
+        ymax = datapoints$ymax
+        by = if (length(unique(datapoints$by)) > 1) datapoints$by else by
+        facet = if (length(unique(datapoints$facet)) > 1) datapoints$facet else facet
+        
+        # Compute group offsets for multi-group boxplots
+        ngrps = length(unique(datapoints$by))
+        if (ngrps > 1 && !settings$x_by) {
+            boxwex_grp = boxwex / ngrps - 0.01
+            group_offsets = seq(
+                -((boxwex - boxwex_grp) / 2),
+                ((boxwex - boxwex_grp) / 2),
+                length.out = ngrps
+            )
+        } else {
+            group_offsets = rep(0, max(ngrps, 1))
+        }
+        offsets_axis = "x"
 
-        if (length(unique(datapoints$by)) > 1) out[["by"]] = datapoints$by
-        if (length(unique(datapoints$facet)) > 1) out[["facet"]] = datapoints$facet
-
-        return(out)
+        # legend customizations
+        settings$legend_args[["pch"]] = settings$legend_args[["pch"]] %||% 22
+        settings$legend_args[["pt.cex"]] = settings$legend_args[["pt.cex"]] %||% 3.5
+        settings$legend_args[["y.intersp"]] = settings$legend_args[["y.intersp"]] %||% 1.25
+        settings$legend_args[["seg.len"]] = settings$legend_args[["seg.len"]] %||% 1.25
+        
+        env2env(environment(), settings, c(
+            "x",
+            "y",
+            "ymin",
+            "ymax",
+            "xlabs",
+            "datapoints",
+            "col",
+            "bg",
+            "by",
+            "facet",
+            "group_offsets",
+            "offsets_axis"
+        ))
     }
     return(fun)
 }
-
-
-
-

@@ -33,3 +33,41 @@ fun = function() {
       )
 }
 expect_snapshot_plot(fun, label = "pointrange_errorbar")
+
+# issues #511 & #516: adding layers to coefplot
+fun = function() {
+  tinyplot(
+    y ~ x, ymin = ymin, ymax = ymax,
+    data = coefs,
+    type = "pointrange",
+    theme = "basic"
+  )
+  tinyplot_add(type = "ribbon")
+  tinyplot_add(type = "hline", lty = 2)
+}
+expect_snapshot_plot(fun, label = "pointrange_with_layers")
+
+# test the reverse too (i.e., adding errorbars on a ribbon)
+fun = function() {
+  tinyplot(
+    y ~ x, ymin = ymin, ymax = ymax,
+    data = coefs,
+    type = "ribbon",
+    theme = "basic"
+  )
+  tinyplot_add(type = "errorbar")
+}
+expect_snapshot_plot(fun, label = "ribbon_with_errorbar")
+
+fun = function() {
+  tinyplot(
+    y ~ x, ymin = ymin, ymax = ymax,
+    data = coefs,
+    type = "pointrange",
+    theme = "classic",
+    flip = TRUE
+  )
+  tinyplot_add(type = "ribbon")
+  tinyplot_add(type = "vline", lty = 2)
+}
+expect_snapshot_plot(fun, label = "pointrange_with_layers_flipped")

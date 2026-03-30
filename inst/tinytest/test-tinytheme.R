@@ -3,7 +3,6 @@ using("tinysnapshot")
 
 tinytheme()
 
-
 thms = eval(formals(tinytheme)$theme)
 
 for (thm in thms) {
@@ -18,22 +17,29 @@ for (thm in thms) {
 rm(thm)
 
 # legend placement
-tinytheme("clean")
 
-f = function() tinyplot(
-  mpg ~ hp | factor(am), data = mtcars,
-  main = "Title of the plot",
-  sub = 'tinytheme("clean") + legend = "left!"',
-  legend = "left!"
-)
+f = function() {
+  tinytheme("clean")
+  tinyplot(
+    mpg ~ hp | factor(am), data = mtcars,
+    main = "Title of the plot",
+    sub = 'tinytheme("clean") + legend = "left!"',
+    legend = "left!"
+  )
+  tinytheme()
+}
 expect_snapshot_plot(f, label = "tinytheme_legend_left")
 
-f = function() tinyplot(
-  mpg ~ hp | factor(am), data = mtcars,
-  main = "Title of the plot",
-  sub = 'tinytheme("clean") + legend = "bottom!"',
-  legend = "bottom!"
-)
+f = function() {
+  tinytheme("clean")
+  tinyplot(
+    mpg ~ hp | factor(am), data = mtcars,
+    main = "Title of the plot",
+    sub = 'tinytheme("clean") + legend = "bottom!"',
+    legend = "bottom!"
+  )
+  tinytheme()
+}
 expect_snapshot_plot(f, label = paste0("tinytheme_legend_bottom"))
 
 #
@@ -55,42 +61,89 @@ tinytheme("dark")
 f()
 expect_snapshot_plot(f, label = "tinytheme_dynamic_dark")
 
+# x-axis adjustment
+f = function() {
+  tinytheme('clean', las = 2)
+  tinyplot(weight ~ feed, data = chickwts, type = "boxplot",
+           main = "Dynamic plot adjustment and whitespace reduction",
+           sub = "Works for perpendicular x-axis labels too")
+  tinytheme()
+}
+expect_snapshot_plot(f, label = "tinytheme_dynamic_x_boxplot")
+
+# facets
 f = function() {
   tinyplot(
-    I(mpg*1e3) ~ hp | disp, data = mtcars, facet = cyl ~ am,
+    I(mpg*1e3) ~ I(hp*1e2) | disp, data = mtcars, facet = cyl ~ am,
     main = "Dynamic plot adjustment and whitespace reduction",
     sub = "Works with facets too"
   )
 }
-tinytheme("clean")
+tinytheme("clean", las = 2)
 f()
 expect_snapshot_plot(f, label = "tinytheme_dynamic_clean_facet")
 
-tinytheme("dark")
+tinytheme("dark", las = 2)
 f()
 expect_snapshot_plot(f, label = "tinytheme_dynamic_dark_facet")
 
-# ridge and spineplot types (req's extra steps b/c of tinyAxis logic)
+tinytheme()
 
-tinytheme('ridge')
+# variation with formatted tick labels
+f = function() {
+  tinytheme("clean")
+  plt(
+    I(decrease/100) ~ treatment, data = OrchardSprays,
+    yaxl = "percent"
+  )
+  tinytheme()
+}
+expect_snapshot_plot(f, label = "tinytheme_dynamic_yaxl")
+
+
+# flipped jitter and boxplot use special internal logic (because of integer spacing)
 
 f = function() {
+  tinytheme('clean')
+  set.seed(99)
+  tinyplot(weight ~ feed, data = chickwts, type = "jitter", flip = TRUE,
+           main = "Dynamic plot adjustment and whitespace reduction",
+           sub = "Flipped jitter plot version")
+  tinytheme()
+}
+expect_snapshot_plot(f, label = "tinytheme_dynamic_jitter_flip")
+
+f = function() {
+  tinytheme('clean')
+  tinyplot(weight ~ feed, data = chickwts, type = "boxplot", flip = TRUE,
+           main = "Dynamic plot adjustment and whitespace reduction",
+           sub = "Flipped boxplot version")
+  tinytheme()
+}
+expect_snapshot_plot(f, label = "tinytheme_dynamic_boxplot_flip")
+
+# ridge and spineplot types (req's extra steps b/c of tinyAxis logic)
+
+f = function() {
+  tinytheme('ridge')
   tinyplot(
     Species ~ Petal.Length, data = iris, type = "ridge",
     main = "Dynamic plot adjustment and whitespace reduction",
     sub = "Ridge plot version"
   )
+  tinytheme()
 }
 expect_snapshot_plot(f, label = "tinytheme_dynamic_ridge")
 
-tinytheme('clean')
 
 f = function() {
+  tinytheme('clean')
   tinyplot(
     Species ~ Petal.Length, data = iris, type = "spineplot",
     main = "Dynamic plot adjustment and whitespace reduction",
     sub = "Spineplot version"
   )
+  tinytheme()
 }
 expect_snapshot_plot(f, label = "tinytheme_dynamic_clean_spineplot")
 
@@ -98,3 +151,26 @@ expect_snapshot_plot(f, label = "tinytheme_dynamic_clean_spineplot")
 ## reset
 
 tinytheme()
+
+
+#
+## ephemeral theme
+
+f = function() {
+  opar = par(mfrow = c(1, 2))
+  plt(Sepal.Length ~ Petal.Length | Species, data = iris,
+      main = "Ephemeral theme", theme = "clean", legend = FALSE)
+  plt_add(type = "lm")
+  plt(Sepal.Length ~ Petal.Length | Species, data = iris,
+      main = "Revert to old theme", legend = FALSE)
+  plt_add(type = "lm")
+  par(opar)
+}
+expect_snapshot_plot(f, label = "tinytheme_ephemeral")
+
+# Ephemeral "default" theme with by + plt_add should not clip (#557)
+f = function() {
+  plt(1:3, c(1, 1, 1), by = c("a", "a", "a"), theme = "default", type = "n")
+  plt_add(type = "b")
+}
+expect_snapshot_plot(f, label = "ephemeral_default_theme_add")

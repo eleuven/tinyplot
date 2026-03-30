@@ -1,0 +1,286 @@
+---
+title: "Tips & Tricks"
+format:
+  html:
+    css: custom.css
+tbl-colwidths: [20,20,50,10]
+---
+
+This page collects miscellaneous tips and tricks for **tinyplot**. By
+definition, these are workarounds---i.e., techniques that fall outside of
+standard use cases or features that aren't (yet) natively supported by the
+package. Please feel free to suggest or add more tips via our [GitHub repo](https://github.com/grantmcdermott/tinyplot/issues).
+
+## Annotations
+
+### Recession bars
+
+In finance and economics, it is common practice to annotate time-series plots
+by highlighting recessions and other periods of interest. While we don't provide
+a dedicated recession bar ("recbar"?) type, achieving this effect in
+**tinyplot** is easily done with a standard `rect()` call. Here's
+a simple example where we highlight the window between 5.5 and 8:
+
+```{r}
+library(tinyplot)
+plt(
+  1:10, type = "b",
+  draw = rect(
+    xleft = 5.5, ybottom = par("usr")[3], xright = 8, ytop = par("usr")[4],
+    col = adjustcolor("hotpink", 0.3), border = NA
+  )
+)
+```
+
+The only real trick here is optimizing the height of the rectangle by passing
+`ybottom = par("usr")[3]` and `ytop = par("usr")[4]`. This effectively tells R
+to maximize the rectangle height so that it extends across the full plotting
+area regardless of the y-axis numbers.^[
+As an side, I'm passing the annotation layer through `draw = rect(...)`, rather
+than `plt_add()` because I want the shading to be drawn _under_ (before) the
+main plot line. This isn't strictly necessary, but a nice aesthetic touch. See 
+the [Layers section](https://grantmcdermott.com/tinyplot/vignettes/introduction.html#layers)
+of the intro tutorial for more.
+] (Convenient!)
+
+The cool thing about this approach is that it is fully generalizable (and
+vectorised). So we could pass a vector of, say, recession start and end dates to
+highlight multiple recessions. You could even roll it into a simple `recbar()`
+function, which is a light wrapper around `rect()`:
+
+```{r}
+recbar = function(start, end, col = "hotpink", alpha = 0.3, border = NA) {
+  col = adjustcolor(col, alpha)
+  rect(start, par('usr')[3], end, par('usr')[4], col = col, border = border)
+}
+
+plt(
+  GNP ~ Year, data = longley, type = "l",
+  draw = recbar(c(1948, 1953, 1957), c(1949, 1954, 1958))
+)
+```
+
+Let's end this tip with a more sophisticated example using real-life US GDP data
+from [FRED](https://fred.stlouisfed.org/series/GDPC1). As a bonus, we'll pair
+our simple `recbar()` function with another `get_rec_dates()` function that
+calculates recession dates according to the standard definition of two
+consecutive quarters of negative growth.
+
+```{r}
+# get 1980+ US GDP data from FRED
+url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=GDPC1&cosd=1980-01-01"
+gdp = read.csv(url) |>
+  setNames(c("date", "gdp")) |>
+  transform(date = as.Date(date))
+
+# function to automatically calculate recession start and end dates, based on
+# gdp data and window definition of 2 periods (quarters) of negative growth
+get_rec_dates = function(gdp, dates, window = 2) {
+  streaks = rle(c(NA, 0 > diff(gdp)))
+  rec_flag = streaks$lengths>=window & streaks$values==TRUE
+  end = cumsum(streaks$lengths)
+  start = end - streaks$lengths # + 1 ## dropping the +1 looks better on a plot
+  start = dates[start[rec_flag]]
+  end = dates[end[rec_flag]]
+  return(data.frame(start = start, end = end))
+}
+
+# finally, grab the recession dates and plot
+rec_dates = get_rec_dates(gdp$gdp, gdp$date)
+plt(
+  gdp ~ date, data = gdp, type = "l",
+  draw = recbar(rec_dates$start, rec_dates$end),
+  main = "US Gross Domestic Product (1980 to present)",
+  sub = "Note: Shaded regions denote recessions",
+  xlab = "Date", ylab = "Billions of $US (2017)", yaxl = "$",
+  theme = "classic"
+)
+```
+
+## Legend
+
+### Legend transparency
+
+By default, the legend inherits the transparency (`alpha`) of the plotted 
+elements. In some cases, this may be undesirable. For example, in the following
+plot, the legend is too light:
+
+```{r}
+library(tinyplot)
+n = 50000
+x = rnorm(n)
+y = x + rnorm(n)
+z = sample(c("a", "b"), n, replace = TRUE)
+dat = data.frame(x, y, z)
+tinyplot(y ~ x | z, data = dat, alpha = .1, pch = 19)
+```
+
+One solution is to draw our plot in two steps. First, we draw an empty plot with
+the desired (zero transparency) legend. Second, we add the transparent points on
+top of the existing canvas.
+
+```{r}
+tinyplot(y ~ x | z, data = dat, pch = 19, empty = TRUE)
+tinyplot_add(empty = FALSE, alpha = .1)
+```
+
+### Multicolumn legends
+
+For cases where we have many discrete groups, the default single column legend
+can overrun the plot limits. For example:
+
+```{r}
+library(tinyplot)
+
+plt(weight ~ Time | Chick, data = ChickWeight, type = "l")
+```
+
+To solve this undesirable behaviour, simply pass an approporiate `ncol`
+adjustment as part of your legend (list) argument:
+
+```{r}
+plt(weight ~ Time | Chick, data = ChickWeight, type = "l",
+    legend = list(ncol = 3))
+```
+
+The same trick works for horizontal legends and/or legends in other positions,
+as well for other plot types and themes. For example:
+
+```{r}
+plt(weight ~ Time | Chick, data = ChickWeight, type = "l",
+    legend = list("bottom!", ncol = 5))
+```
+
+(Admittedly, the end result is a bit compressed here because of the default 
+aspect ratio that we use for figures on our website. But for regular interactive 
+plots, or plots saved to disk, the aesthetic effect should be quite pleasing.)
+
+## Labels
+
+### Direct labels
+
+Direct labels can provide a nice alternative to a standard legend, particularly
+for grouped line plots. While `tinyplot` doesn't offer a "native" direct labels
+type, you can easily achieve the same end result using an idiomatic layering
+approach.
+
+```{r}
+#| eval: false
+
+library(tinyplot)
+tinytheme("clean2")
+
+aq = airquality
+aq$Month = factor(month.name[aq$Month], levels = month.name[5:9])
+
+# base layer
+plt(Temp ~ Day | Month, data = aq, type = "l", legend = FALSE)
+
+# for labels: subset to final dates for each month 
+aq2 = aq[aq$Day == ave(aq$Day, aq$Month, FUN = max), ]
+
+# add the labels with a type_text() layer
+plt_add(data = aq2, type = "text", labels = aq2$Month,
+        pos = 4, offset = 0.2, xpd = NA)
+```
+
+```{r}
+#| echo: false
+
+## dev note: we need to go through some eval -> echo false trickery to get
+## around the fact that Quarto doesn't keep the same graphics device open...
+## which in turn is needed for strwidth(). The website will only display the
+## nicely formatted code that works in a live session, though.
+
+library(tinyplot)
+tinytheme("clean2")
+
+aq = airquality
+aq$Month = factor(month.name[aq$Month], levels = month.name[5:9])
+
+# base layer
+plt(Temp ~ Day | Month, data = aq, type = "l", legend = FALSE)
+
+# for labels: subset to final dates for each month 
+aq2 = aq[aq$Day == ave(aq$Day, aq$Month, FUN = max), ]
+
+longest_lab = max(strwidth(as.character(aq2$Month)))/2
+
+# add the labels with a type_text() layer
+plt_add(data = aq2, type = "text", labels = aq2$Month,
+        pos = 4, offset = 0.2, xpd = NA)
+```
+
+Hmmmm, can you see a problem? We used `type_text(..., xpd = NA)` in the second
+layer to avoid text clipping, but the longer labels are still being cut off due
+to the limited RHS margin space of our `"clean2"` plotting theme.
+
+The good news is that there's an easy solution. Simply grab the theme's
+parameters, bump out the RHS margin by the longest label in our dataset, and
+then replot.
+
+```{r}
+#| eval: false
+
+# Fix: first grab the theme params and then adjust the RHS margin by
+# the longest label in the dataset
+longest_lab = max(strwidth(as.character(aq2$Month)))/2 # divide by 2 to get lines
+parms = tinyplot:::theme_clean2
+parms$mar[4] = parms$mar[4] + longest_lab
+tinytheme("clean2", mar = parms$mar) # theme with adjusted margins
+
+# Now plot both the base and direct label layers
+plt(Temp ~ Day | Month, data = aq, type = "l", legend = FALSE)
+plt_add(data = aq2, type = "text", labels = aq2$Month,
+        pos = 4, offset = 0.2, xpd = NA)
+```
+
+```{r}
+#| echo: false
+
+## dev note: This is the code that actually runs, using longest_lab from the
+## previous code chunk
+parms = tinyplot:::theme_clean2
+parms$mar[4] = parms$mar[4] + longest_lab
+tinytheme("clean2", mar = parms$mar)
+plt(Temp ~ Day | Month, data = aq, type = "l", legend = FALSE)
+plt_add(data = aq2, type = "text", labels = aq2$Month,
+        pos = 4, offset = 0.2, xpd = NA)
+```
+
+```{r}
+# Reset the theme (optional, but recommended)
+tinytheme()
+```
+
+### Rotated axis labels
+
+When category labels are long or overlapping, users may want to rotate them for
+readability. One option is fully perpendicular (90°) axis labels, which
+`tinyplot` supports via themes, e.g. `tinytheme("clean", las = 2)`. If a user
+wants finer control over the degree of rotation---say, 45°---this requires a bit
+more manual effort since we do not support custom rotation out of the box. The
+workaround involves three steps:
+
+1. Suppress the default x-axis with `xaxt = "n"`.
+2. Use `text()` to manually add rotated labels.
+3. Optionally, clear the y-axis label by setting `ylab = ""`.
+
+```{r}
+library(tinyplot)
+tinyplot(~cyl, data = mtcars, type = "barplot", xaxt = "n", ylab = "")
+text(1:3, 0,
+    labels = c("Four cylinders", "Six cylinders", "Eight cylinders"),
+    srt = 45,          # rotate text 45 degrees
+    adj = c(1.1, 1.5), # adjust text alignment
+    xpd = TRUE)        # allow drawing outside plot region
+```
+
+Note that `adj` and `xpd` settings may require trial and error to position
+labels correctly. Also, removing the x-axis label by setting `ylab = ""` is
+unintuitive but currently necessary when using formulas like `~ cyl`.
+
+P.S. Another option for long axis labels is to wrap them at a designated
+character length. See the final example in the
+[`tinylabel`](https://grantmcdermott.com/tinyplot/man/tinylabel.html)
+documentation for an example.

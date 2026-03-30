@@ -1,19 +1,49 @@
 # calculate limits of each plot
 
-lim_args = function(datapoints, xlim, ylim, type) {
+lim_args = function(settings) {
+  env2env(
+    settings,
+    environment(),
+    c(
+      "xaxb", "xlabs", "xlim", "null_xlim", 
+      "yaxb", "ylabs", "ylim", "null_ylim",
+      "datapoints", "type"
+    )
+  )
 
-  if (is.null(xlim))
-    xlim = range(c(datapoints[["x"]], datapoints[["xmin"]],
-                   datapoints[["xmax"]]), finite = TRUE)
-  if (is.null(ylim))
-    ylim = range(c(datapoints[["y"]], datapoints[["ymin"]],
-                   datapoints[["ymax"]]), finite = TRUE)
+  # For cases where x/yaxb is provided and corresponding x/ylabs is not null...
+  # We can subset these here to provide breaks
+  if (!is.null(xaxb) && !is.null(xlabs)) {
+    xlabs = xlabs[names(xlabs) %in% xaxb]
+    xaxb = NULL # don't need this any more
+  }
+  if (!is.null(yaxb) && !is.null(ylabs)) {
+    ylabs = ylabs[names(ylabs) %in% yaxb]
+    yaxb = NULL # don't need this any more
+  }
+
+  if (is.null(xlim)) {
+    xlim = range(as.numeric(c(
+      datapoints[["x"]], datapoints[["xmin"]],
+      datapoints[["xmax"]])), finite = TRUE)
+  }
+  if (is.null(ylim)) {
+    ylim = range(as.numeric(c(
+      datapoints[["y"]], datapoints[["ymin"]],
+      datapoints[["ymax"]])), finite = TRUE)
+  }
 
   if (identical(type, "boxplot")) {
     xlim = xlim + c(-0.5, 0.5)
   }
 
-  out = list(xlim = xlim, ylim = ylim)
-  return(out)
-}
+  if (null_xlim && !is.null(xaxb) && type != "spineplot") xlim = range(c(xlim, xaxb))
+  if (null_ylim && !is.null(yaxb) && type != "spineplot") ylim = range(c(ylim, yaxb))
 
+  # update settings
+  env2env(
+    environment(),
+    settings,
+    c("xlim", "ylim", "xlabs", "ylabs", "xaxb", "yaxb")
+  )
+}

@@ -1,14 +1,16 @@
 
 
-# tinyplot <img src="man/figures/logo.png" align="right" height="139" alt="" />
+<img src="https://grantmcdermott.com/tinyplot/logo.svg" align="right" width="120" alt="tinyplot logo" />
+
+# tinyplot
 
 <!-- badges: start -->
 
 <a href="https://CRAN.R-project.org/package=tinyplot"><img src="https://www.r-pkg.org/badges/version/tinyplot" class="img-fluid" alt="CRAN version"></a>
-<a href="https://grantmcdermott.r-universe.dev"><img src="https://grantmcdermott.r-universe.dev/badges/tinyplot" class="img-fluid" alt="R-universe status badge"></a>
+<a href="https://grantmcdermott.r-universe.dev"><img src="https://grantmcdermott.r-universe.dev/badges/tinyplot" class="img-fluid" alt="R-universe version"></a>
 <a href="https://CRAN.R-project.org/package=tinyplot"><img src="https://tinyverse.netlify.app/badge/tinyplot" class="img-fluid" alt="Dependencies"></a>
-<a href="https://github.com/grantmcdermott/tinyplot/actions/workflows/R-CMD-check.yaml"><img src="https://github.com/grantmcdermott/tinyplot/actions/workflows/R-CMD-check.yaml/badge.svg" class="img-fluid" alt="ci"></a>
-<a href = "https://github.com/grantmcdermott/tinyplot/blob/main/LICENSE.md" target = "_blank"><img src="https://img.shields.io/badge/license-Apache2.0-blue"></a>
+<a href="https://github.com/grantmcdermott/tinyplot/actions/workflows/R-CMD-check.yaml"><img src="https://github.com/grantmcdermott/tinyplot/actions/workflows/R-CMD-check.yaml/badge.svg" class="img-fluid" alt="GitHub Actions"></a>
+<a href="https://grantmcdermott.com/tinyplot/LICENSE.html"><img src="https://img.shields.io/badge/license-Apache2.0-blue" class="img-fluid" alt="License"></a>
 <a href="https://grantmcdermott.com/tinyplot/index.html"><img src="https://img.shields.io/badge/docs-homepage-blue.svg" class="img-fluid" alt="Docs"></a>
 <!-- badges: end -->
 
@@ -18,13 +20,15 @@ A lightweight extension of the base R graphics system, with support for
 automatic grouping, legends, facets, themes, and various other
 enhancements.
 
-The stable version of **tinyplot** is available on CRAN.
+The stable version of **tinyplot** is available on
+[CRAN](https://CRAN.R-project.org/package=tinyplot).
 
 ``` r
 install.packages("tinyplot")
 ```
 
-Or, you can grab the latest development version from R-universe.
+Or, you can grab the latest development version from
+[R-universe](https://grantmcdermott.R-universe.dev/).
 
 ``` r
 install.packages("tinyplot", repos = "https://grantmcdermott.r-universe.dev")
@@ -88,9 +92,9 @@ tinyplot(Sepal.Length ~ Petal.Length | Species, data = iris)             # formu
 <img src="man/figures/README-quickstart2-1.png" style="width:70.0%" />
 
 If you would prefer to save on a few keystrokes, you can use the
-shorthand `plt()` alias instead instead of typing out `tinyplot()` in
-full. Here’s the same plot with this shorthand alias, plus a few
-aesthetic tweaks:
+shorthand `plt()` alias instead of typing out `tinyplot()` in full.
+Here’s the same plot with this shorthand `plt()` alias, as well as an
+added `"lm"` layer and a few aesthetic tweaks:
 
 ``` r
 plt(
@@ -99,6 +103,7 @@ plt(
   palette = "dark", pch = 16,
   grid = TRUE, frame = FALSE
 )
+plt_add(type = "lm")
 ```
 
 <img src="man/figures/README-quickstart3-1.png" style="width:70.0%" />
@@ -110,13 +115,14 @@ built-in themes for convenient plot customization:
 tinytheme("clean2")
 
 plt(Sepal.Length ~ Petal.Length | Species, data = iris)
+plt_add(type = "lm")
 ```
 
 <img src="man/figures/README-quickstart_theme-1.png"
 style="width:70.0%" />
 
 Themes are persistent and will be applied to subsequent plots. For
-example, here is a grouped grouped density plot:
+example, here is a grouped density plot:
 
 ``` r
 plt(
