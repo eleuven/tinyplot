@@ -21,6 +21,7 @@ tinyplot(x, ...)
   facet = NULL,
   facet.args = NULL,
   data = NULL,
+  weights = NULL,
   type = NULL,
   legend = NULL,
   main = NULL,
@@ -69,6 +70,7 @@ tinyplot(x, ...)
   data = parent.frame(),
   facet = NULL,
   facet.args = NULL,
+  weights = NULL,
   type = NULL,
   xmin = NULL,
   xmax = NULL,
@@ -185,6 +187,14 @@ features globally for all \code{tinyplot} plots.
 
 \item{data}{a data.frame (or list) from which the variables in formula
 should be taken. A matrix is converted to a data frame.}
+
+\item{weights}{observation weights for plot types that support weighting.
+In the default method, pass a numeric vector of the same length as the
+plotted data. In the formula method, pass a one-sided formula such as
+\code{~w}; this includes the weights in the underlying
+\code{\link[stats]{model.frame}} call so they remain aligned with the
+plotted variables after \code{subset} and \code{na.action} are applied. Top-level
+weights are currently used by weighted model layers such as \code{"lm"}.}
 
 \item{type}{character string or call to a \verb{type_*()} function giving the
 type of plot desired.
@@ -724,6 +734,9 @@ tinyplot(
   type = "l",
   palette = "tableau"
 )
+
+# Top-level observation weights are supported for plot types that use them
+tinyplot(mpg ~ wt, data = mtcars, weights = ~ cyl, type = "lm")
 
 # It's possible to customize the look of your plots by setting graphical
 # parameters (e.g., via `(t)par`)... But a more convenient way is to just use

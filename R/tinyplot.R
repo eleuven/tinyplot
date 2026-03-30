@@ -85,6 +85,13 @@
 #'   should not be specified in the same call.
 #' @param data a data.frame (or list) from which the variables in formula
 #'   should be taken. A matrix is converted to a data frame.
+#' @param weights observation weights for plot types that support weighting.
+#'   In the default method, pass a numeric vector of the same length as the
+#'   plotted data. In the formula method, pass a one-sided formula such as
+#'   `~w`; this includes the weights in the underlying
+#'   \code{\link[stats]{model.frame}} call so they remain aligned with the
+#'   plotted variables after `subset` and `na.action` are applied. Top-level
+#'   weights are currently used by weighted model layers such as `"lm"`.
 #' @param type character string or call to a `type_*()` function giving the
 #'   type of plot desired.
 #'   - NULL (default): Choose a sensible type for the type of `x` and `y` inputs
@@ -558,6 +565,9 @@
 #'   type = "l",
 #'   palette = "tableau"
 #' )
+#'
+#' # Top-level observation weights are supported for plot types that use them
+#' tinyplot(mpg ~ wt, data = mtcars, weights = ~ cyl, type = "lm")
 #'
 #' # It's possible to customize the look of your plots by setting graphical
 #' # parameters (e.g., via `(t)par`)... But a more convenient way is to just use
